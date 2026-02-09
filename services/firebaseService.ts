@@ -1,5 +1,6 @@
+
 // Standard modular Firebase v9+ initialization
-import { initializeApp } from "firebase/app";
+import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, 
   collection, 

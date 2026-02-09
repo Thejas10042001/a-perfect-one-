@@ -119,17 +119,17 @@ export const PracticeSession: React.FC<PracticeSessionProps> = ({ analysis }) =>
               sourcesRef.current.add(source);
             }
 
-            // Correctly handle transcription using refs to avoid stale closures
+            // Correctly handle transcription using serverContent flags
             if (message.serverContent?.inputTranscription) {
               const text = message.serverContent.inputTranscription.text;
               userTranscriptionRef.current += text;
               setCurrentTranscription(prev => ({ ...prev, user: userTranscriptionRef.current }));
-            }
-            if (message.serverContent?.outputTranscription) {
+            } else if (message.serverContent?.outputTranscription) {
               const text = message.serverContent.outputTranscription.text;
               aiTranscriptionRef.current += text;
               setCurrentTranscription(prev => ({ ...prev, ai: aiTranscriptionRef.current }));
             }
+            
             if (message.serverContent?.turnComplete) {
               // Copy ref values to local variables before clearing, per guidelines
               const finalUserText = userTranscriptionRef.current;
@@ -141,7 +141,9 @@ export const PracticeSession: React.FC<PracticeSessionProps> = ({ analysis }) =>
             }
 
             if (message.serverContent?.interrupted) {
-              sourcesRef.current.forEach(s => { try { s.stop(); } catch(e) {} });
+              for (const source of sourcesRef.current.values()) {
+                try { source.stop(); } catch(e) {}
+              }
               sourcesRef.current.clear();
               nextStartTimeRef.current = 0;
             }

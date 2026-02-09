@@ -66,10 +66,10 @@ function safeJsonParse(str: string) {
   throw new Error("Failed to parse cognitive intelligence response as valid JSON.");
 }
 
-// Fix: Always instantiate GoogleGenAI inside functions to ensure fresh API key selection is used
+// Fix: Use 'gemini-2.5-flash-image' for vision-capable OCR tasks and instantiate inside function
 export async function performVisionOcr(base64Data: string, mimeType: string): Promise<string> {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const modelName = 'gemini-3-pro-preview'; 
+  const modelName = 'gemini-2.5-flash-image'; 
   try {
     const response = await ai.models.generateContent({
       model: modelName,
@@ -236,7 +236,7 @@ export async function* performCognitiveSearchStream(
   const modelName = 'gemini-3-pro-preview';
   const styleDirectives = context.answerStyles.map(style => `- Create a section exactly titled "### ${style}" and provide EXHAUSTIVE, multi-paragraph detail.`).join('\n');
 
-  // Fix: Adding explicit responseSchema to ensure reliable structured output
+  // Explicit responseSchema for structured search output
   const responseSchema = {
     type: Type.OBJECT,
     properties: {
@@ -317,6 +317,7 @@ export async function performCognitiveSearch(
   return safeJsonParse(fullText || "{}");
 }
 
+// Fix: Adding responseSchema to dynamic suggestions for improved output stability
 export async function generateDynamicSuggestions(filesContent: string, context: MeetingContext): Promise<string[]> {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const modelName = 'gemini-3-flash-preview';
@@ -326,6 +327,10 @@ export async function generateDynamicSuggestions(filesContent: string, context: 
     contents: prompt, 
     config: { 
       responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.ARRAY,
+        items: { type: Type.STRING }
+      },
       thinkingConfig: { thinkingBudget: 0 }
     } 
   });
