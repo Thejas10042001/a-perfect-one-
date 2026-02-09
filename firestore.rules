@@ -1,0 +1,15 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // This rule enforces that each user can only access their own documents
+    match /cognitive_documents/{document} {
+      // Allow read/update/delete only if the user is authenticated and the existing document's userId matches their UID
+      allow read, update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      
+      // Allow create only if the user is authenticated and the new document's userId matches their UID
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+    }
+  }
+}
