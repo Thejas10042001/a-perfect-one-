@@ -1,20 +1,19 @@
+
 import React, { useState, useRef, useEffect, FC } from 'react';
 import { ICONS } from '../constants';
 import { streamSalesGPT, generatePineappleImage, streamDeepStudy } from '../services/geminiService';
-import { GPTMessage, GPTToolMode, UploadedFile } from '../types';
+import { GPTMessage, GPTToolMode } from '../types';
 
 interface SalesGPTProps {
-  files: UploadedFile[];
+  activeDocuments: { name: string; content: string }[];
 }
 
-export const SalesGPT: FC<SalesGPTProps> = ({ files }) => {
+export const SalesGPT: FC<SalesGPTProps> = ({ activeDocuments }) => {
   const [messages, setMessages] = useState<GPTMessage[]>([]);
   const [input, setInput] = useState("");
   const [mode, setMode] = useState<GPTToolMode>('standard');
   const [isProcessing, setIsProcessing] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
-
-  const readyFiles = files.filter(f => f.status === 'ready');
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -50,7 +49,7 @@ export const SalesGPT: FC<SalesGPTProps> = ({ files }) => {
 
     setMessages(prev => [...prev, assistantMessage]);
 
-    const context = readyFiles.map(f => `FILE [${f.name}]:\n${f.content}`).join('\n\n');
+    const context = activeDocuments.map(d => `FILE [${d.name}]:\n${d.content}`).join('\n\n');
 
     try {
       if (mode === 'pineapple') {
@@ -134,9 +133,9 @@ export const SalesGPT: FC<SalesGPTProps> = ({ files }) => {
            </div>
            <div className="h-4 w-px bg-slate-200"></div>
            <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
-              {readyFiles.length > 0 ? readyFiles.map((f, i) => (
+              {activeDocuments.length > 0 ? activeDocuments.map((doc, i) => (
                 <div key={i} className="px-3 py-1 bg-indigo-50 text-indigo-600 text-[8px] font-black uppercase tracking-widest rounded-lg border border-indigo-100 whitespace-nowrap">
-                   {f.name}
+                   {doc.name}
                 </div>
               )) : (
                 <span className="text-[8px] font-bold text-slate-300 uppercase italic">No documents currently uploaded to memory.</span>
@@ -154,7 +153,7 @@ export const SalesGPT: FC<SalesGPTProps> = ({ files }) => {
             </div>
             <div className="max-w-md">
               <h4 className="text-2xl font-black text-slate-800">Grounding Ready</h4>
-              <p className="text-slate-500 mt-2 font-medium">I have access to your uploaded documents. Ask me to extract insights, draft pitches, or summarize complex technical requirements.</p>
+              <p className="text-slate-500 mt-2 font-medium">I have access to your {activeDocuments.length} active documents. Ask me to extract insights, draft pitches, or summarize complex technical requirements.</p>
             </div>
             <div className="grid grid-cols-2 gap-4 w-full max-w-lg">
                <StarterCard label="Strategic Wedge" onClick={() => setInput("Based on the docs, what is our best competitive wedge?")} />

@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type, Modality, GenerateContentResponse } from "@google/genai";
 import { AnalysisResult, MeetingContext, ThinkingLevel, GPTMessage } from "../types";
 
@@ -66,10 +65,11 @@ function safeJsonParse(str: string) {
   throw new Error("Failed to parse cognitive intelligence response as valid JSON.");
 }
 
-// Fix: Use 'gemini-2.5-flash-image' for vision-capable OCR tasks and instantiate inside function
+// Vision OCR using gemini-3-flash-preview
 export async function performVisionOcr(base64Data: string, mimeType: string): Promise<string> {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const modelName = 'gemini-2.5-flash-image'; 
+  // Using gemini-3-flash-preview for text-based vision tasks as per guidelines
+  const modelName = 'gemini-3-flash-preview'; 
   try {
     const response = await ai.models.generateContent({
       model: modelName,
@@ -90,9 +90,6 @@ export async function performVisionOcr(base64Data: string, mimeType: string): Pr
   }
 }
 
-/**
- * Converts internal GPTMessage history to Gemini Content format.
- */
 function formatHistory(history: GPTMessage[]) {
   return history.map(msg => ({
     role: msg.role === 'user' ? 'user' : 'model',
@@ -100,7 +97,7 @@ function formatHistory(history: GPTMessage[]) {
   }));
 }
 
-// Sales GPT: Fast Standard Chat with History and Context
+// Sales GPT: Balanced grounded and general intelligence
 export async function* streamSalesGPT(prompt: string, history: GPTMessage[], context?: string): AsyncGenerator<string> {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const modelName = 'gemini-3-flash-preview';
@@ -111,14 +108,19 @@ export async function* streamSalesGPT(prompt: string, history: GPTMessage[], con
   ];
 
   const systemInstruction = `You are Sales GPT, an elite sales intelligence agent. 
-  ${context ? `GROUNDING DATA PROVIDED: Below is the content of the relevant documents. 
-  PRIORITIZE using this information to answer user queries. If the answer is contained in the documents, cite the document name or section if possible.
   
-  --- DOCUMENT CONTEXT ---
+  CORE MISSION: Provide high-impact sales intelligence.
+  
+  GROUNDING RULES:
+  1. If GROUNDING DATA is provided below, prioritize it. 
+  2. If the user's question relates to specific data in the documents, use that data and cite the source.
+  3. If the question is general or the data isn't in the docs, do NOT refuse to answer. Instead, use your world-class general knowledge to provide a strategic, authoritative response.
+  
+  STYLE: Direct, authoritative, and strategic. No fluff.
+  
+  ${context ? `--- DOCUMENT GROUNDING DATA ---
   ${context}
-  -----------------------` : ""}
-  
-  Be concise, authoritative, and strategic. If asked something unrelated to the documents, you may answer using your general knowledge but clearly state if the information was not found in the provided files.`;
+  -----------------------` : ""}`;
 
   try {
     const result = await ai.models.generateContentStream({
@@ -170,7 +172,7 @@ export async function generatePineappleImage(prompt: string): Promise<string | n
   }
 }
 
-// Deep Study: Heavy Reasoning with History and Context
+// Deep Study: Advanced Reasoning Core
 export async function* streamDeepStudy(prompt: string, history: GPTMessage[], context?: string): AsyncGenerator<string> {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const modelName = 'gemini-3-pro-preview';
@@ -180,16 +182,23 @@ export async function* streamDeepStudy(prompt: string, history: GPTMessage[], co
     { role: 'user', parts: [{ text: prompt }] }
   ];
 
-  const systemInstruction = `You are a world-class Strategic Research Lead. 
-  TASK: Conduct an exhaustive Deep Study on the provided topic, synthesizing multiple data points from the grounded context.
+  const systemInstruction = `You are a world-class Strategic Research Lead performing a "Deep Study".
   
-  STYLE: Thorough, professional, academic but accessible. 
+  MISSION: Conduct an exhaustive, multi-layered analysis that goes far beyond obvious observations.
+  
+  ANALYTICAL LAYERS:
+  1. DOCUMENT SYNTHESIS: Extract specific strategic pillars from the grounded context provided.
+  2. OUT-OF-THE-BOX THINKING: Infuse creative, non-obvious sales maneuvers and global market trends.
+  3. CUSTOMER PSYCHOLOGY: Analyze the situation from the CUSTOMER'S point of view (their fears, personal incentives, and organizational pressures).
+  4. STRATEGIC ROADMAP: Provide a step-by-step execution plan for the salesperson.
+  
+  STYLE: Exhaustive, professional, academic but actionable.
   
   ${context ? `--- GROUNDED DOCUMENT CONTEXT ---
   ${context}
   -----------------------` : ""}
   
-  Always leverage the thinking budget to find non-obvious connections.`;
+  Use the maximum thinking budget to find hidden connections.`;
 
   try {
     const result = await ai.models.generateContentStream({
@@ -212,6 +221,7 @@ export async function* streamDeepStudy(prompt: string, history: GPTMessage[], co
 
 export interface CognitiveSearchResult {
   answer: string;
+  cognitiveShot: string; // High-impact concise summary
   briefExplanation: string;
   articularSoundbite: string; 
   psychologicalProjection: {
@@ -234,12 +244,12 @@ export async function* performCognitiveSearchStream(
 ): AsyncGenerator<string> {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const modelName = 'gemini-3-pro-preview';
-  const styleDirectives = context.answerStyles.map(style => `- Create a section exactly titled "### ${style}" and provide EXHAUSTIVE, multi-paragraph detail.`).join('\n');
+  const styleDirectives = context.answerStyles.map(style => `- Create a section exactly titled "### ${style}" and provide EXHAUSTIVE detail.`).join('\n');
 
-  // Explicit responseSchema for structured search output
   const responseSchema = {
     type: Type.OBJECT,
     properties: {
+      cognitiveShot: { type: Type.STRING, description: "A high-impact, one-sentence tactical summary of the answer." },
       articularSoundbite: { type: Type.STRING },
       briefExplanation: { type: Type.STRING },
       answer: { type: Type.STRING },
@@ -273,7 +283,7 @@ export async function* performCognitiveSearchStream(
         required: ["painPoint", "capability", "strategicValue"]
       }
     },
-    required: ["articularSoundbite", "briefExplanation", "answer", "psychologicalProjection", "citations", "reasoningChain"]
+    required: ["cognitiveShot", "articularSoundbite", "briefExplanation", "answer", "psychologicalProjection", "citations", "reasoningChain"]
   };
 
   const prompt = `TASK: Synthesize a maximum-depth response to: "${question}". 
@@ -288,7 +298,7 @@ export async function* performCognitiveSearchStream(
       model: modelName,
       contents: prompt,
       config: {
-        systemInstruction: `You are a world-class Senior Cognitive Sales Strategist. Produce technical rigor and exhaustive depth.`,
+        systemInstruction: `You are a Senior Cognitive Sales Strategist. Provide technical rigor and grounded depth in JSON.`,
         responseMimeType: "application/json",
         responseSchema,
         thinkingConfig: { thinkingBudget: 32768 }
@@ -317,7 +327,6 @@ export async function performCognitiveSearch(
   return safeJsonParse(fullText || "{}");
 }
 
-// Fix: Adding responseSchema to dynamic suggestions for improved output stability
 export async function generateDynamicSuggestions(filesContent: string, context: MeetingContext): Promise<string[]> {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const modelName = 'gemini-3-flash-preview';
@@ -479,7 +488,7 @@ export async function analyzeSalesContext(filesContent: string, context: Meeting
             realMeaning: { type: Type.STRING }, 
             strategy: { type: Type.STRING }, 
             exactWording: { type: Type.STRING }, 
-            empathyTip: { type: Type.STRING },
+            empathyTip: { type: Type.STRING }, 
             valueTip: { type: Type.STRING },
             citation: citationSchema 
           }, 

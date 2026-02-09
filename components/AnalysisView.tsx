@@ -88,7 +88,7 @@ const CompetitorCard = ({ comp, name }: { comp: CompetitorInsight, name: string 
         <div>
            <h4 className="text-2xl font-black text-slate-900 tracking-tight">{name}</h4>
            <div className="flex items-center gap-2 mt-1">
-              <span className={`w-2 h-2 rounded-full ${comp.threatProfile === 'Direct' ? 'bg-rose-500' : 'bg-amber-500'}`}></span>
+              <span className={`w-2 h-2 rounded-full ${comp.threatProfile === 'Direct' ? 'bg-rose-500' : 'bg-emerald-500'}`}></span>
               <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{comp.threatProfile} Threat Profile</span>
            </div>
         </div>
@@ -371,32 +371,65 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ result, files, conte
         </div>
       </section>
 
-      {/* Psychology Matrix */}
+      {/* Psychology Matrix Enhanced */}
       <section className="bg-white rounded-[4rem] p-12 shadow-2xl border border-slate-200">
-        <div className="flex flex-col lg:flex-row gap-16 items-center">
-          <div className="w-full lg:w-1/2">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-500 mb-2">Neural Matrix</h3>
-            <h2 className="text-4xl font-black text-slate-900 mb-6">Buyer Psychology Identity</h2>
-            <div className="space-y-6 text-slate-600 italic border-l-4 border-indigo-100 pl-6">
-              <p><strong>Persona:</strong> {result.snapshot.personaIdentity}</p>
-              <p><strong>Logic:</strong> {result.snapshot.decisionLogic}</p>
+        <div className="flex flex-col lg:flex-row gap-16 items-start">
+          <div className="w-full lg:w-1/2 space-y-10">
+            <div>
+              <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-500 mb-2">Neural Matrix</h3>
+              <h2 className="text-4xl font-black text-slate-900 mb-6">Buyer Psychology Identity</h2>
+              <div className="space-y-6 text-slate-600 italic border-l-4 border-indigo-100 pl-6">
+                <p><strong>Persona:</strong> {result.snapshot.personaIdentity}</p>
+                <p><strong>Logic:</strong> {result.snapshot.decisionLogic}</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10">
+                {radarData.map((d, i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="flex justify-between text-[9px] font-black uppercase text-slate-400">
+                      <span>{d.label}</span>
+                      <span>{d.value}%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${d.value}%` }}></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10">
-              {radarData.map((d, i) => (
-                <div key={i} className="space-y-2">
-                  <div className="flex justify-between text-[9px] font-black uppercase text-slate-400">
-                    <span>{d.label}</span>
-                    <span>{d.value}%</span>
-                  </div>
-                  <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${d.value}%` }}></div>
-                  </div>
-                </div>
-              ))}
+
+            {/* Anticipated Resistance Nodes */}
+            <div className="pt-10 border-t border-slate-100">
+              <div className="flex items-center gap-3 mb-6">
+                 <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center">
+                    <ICONS.Security className="w-4 h-4" />
+                 </div>
+                 <h4 className="text-[11px] font-black uppercase text-slate-900 tracking-widest">Anticipated Resistance Nodes</h4>
+              </div>
+              <div className="space-y-4">
+                {result.snapshot.likelyObjections.slice(0, 3).map((objection, i) => {
+                  // Find corresponding strategy from objectionHandling
+                  const handle = result.objectionHandling.find(oh => oh.objection.toLowerCase().includes(objection.text.toLowerCase().substring(0, 10)));
+                  return (
+                    <div key={i} className="p-6 bg-slate-50 rounded-3xl border border-slate-100 hover:border-rose-200 transition-all group">
+                       <p className="text-xs font-black text-slate-800 mb-2 tracking-tight group-hover:text-rose-600 transition-colors">“{objection.text}”</p>
+                       <div className="flex items-start gap-2">
+                          <span className="text-[9px] font-black uppercase text-indigo-500 mt-0.5 tracking-widest shrink-0">Strategy:</span>
+                          <p className="text-[10px] font-bold text-slate-500 leading-snug">
+                            {handle?.strategy || "Leverage grounded ROI proof and persona-specific empathy nodes."}
+                          </p>
+                       </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
-          <div className="w-full lg:w-1/2 flex justify-center">
+          <div className="w-full lg:w-1/2 flex flex-col items-center justify-center sticky top-24">
             <CognitiveRadarChart data={radarData} />
+            <div className="mt-4 p-6 bg-indigo-50 rounded-[2.5rem] border border-indigo-100 text-center max-w-sm">
+               <p className="text-[9px] font-black uppercase text-indigo-600 tracking-widest mb-1">Synthesized Decision Driver</p>
+               <p className="text-xs font-bold text-slate-700 italic">“Anchored in high {radarData.sort((a,b) => b.value - a.value)[0].label.toLowerCase()}—responses must prioritize structural validation.”</p>
+            </div>
           </div>
         </div>
       </section>

@@ -90,6 +90,13 @@ const App: React.FC = () => {
   const readyFilesCount = useMemo(() => files.filter(f => f.status === 'ready').length, [files]);
   const readyLibraryCount = useMemo(() => selectedLibraryDocIds.length, [selectedLibraryDocIds]);
 
+  // Combined list of all documents that are "active" (session uploads + selected library docs)
+  const activeDocuments = useMemo(() => {
+    const sessionDocs = files.filter(f => f.status === 'ready').map(f => ({ name: f.name, content: f.content }));
+    const libDocs = history.filter(d => selectedLibraryDocIds.includes(d.id)).map(d => ({ name: d.name, content: d.content }));
+    return [...sessionDocs, ...libDocs];
+  }, [files, history, selectedLibraryDocIds]);
+
   const generateStateHash = useCallback(() => {
     const fileIds = files.map(f => `${f.name}-${f.content.length}`).join('|');
     const libIds = selectedLibraryDocIds.sort().join('|');
@@ -98,10 +105,7 @@ const App: React.FC = () => {
   }, [files, selectedLibraryDocIds, meetingContext]);
 
   const runAnalysis = useCallback(async () => {
-    const readySessionFiles = files.filter(f => f.status === 'ready');
-    const selectedHistoryDocs = history.filter(doc => selectedLibraryDocIds.includes(doc.id));
-    
-    if (readySessionFiles.length === 0 && selectedHistoryDocs.length === 0) {
+    if (activeDocuments.length === 0) {
       setError("Please ensure at least one document (from library or upload) is ready for analysis.");
       return;
     }
@@ -118,10 +122,7 @@ const App: React.FC = () => {
     setStatusMessage("Synthesizing Intelligence Core...");
 
     try {
-      const sessionContent = readySessionFiles.map(f => `FILE: ${f.name}\n${f.content}`);
-      const libraryContent = selectedHistoryDocs.map(d => `LIBRARY DOC: ${d.name}\n${d.content}`);
-      const combinedContent = [...sessionContent, ...libraryContent].join('\n\n');
-      
+      const combinedContent = activeDocuments.map(d => `DOC NAME: ${d.name}\n${d.content}`).join('\n\n');
       const result = await analyzeSalesContext(combinedContent, meetingContext);
       
       setAnalysis(result);
@@ -134,7 +135,7 @@ const App: React.FC = () => {
       setIsAnalyzing(false);
       setStatusMessage("");
     }
-  }, [files, history, selectedLibraryDocIds, meetingContext, analysis, generateStateHash]);
+  }, [activeDocuments, meetingContext, analysis, generateStateHash]);
 
   const reset = () => {
     if(confirm("Are you sure you want to wipe current strategy context?")) {
@@ -258,10 +259,10 @@ const App: React.FC = () => {
                     <div className="flex flex-col items-center gap-4">
                       <button
                         onClick={runAnalysis}
-                        disabled={(readyFilesCount === 0 && readyLibraryCount === 0) || isAnyFileProcessing}
+                        disabled={activeDocuments.length === 0 || isAnyFileProcessing}
                         className={`
                           flex items-center gap-3 px-16 py-6 rounded-full font-black text-xl shadow-2xl transition-all
-                          ${((readyFilesCount > 0 || readyLibraryCount > 0) && !isAnyFileProcessing)
+                          ${(activeDocuments.length > 0 && !isAnyFileProcessing)
                             ? 'bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105 active:scale-95 cursor-pointer shadow-indigo-200' 
                             : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}
                         `}
@@ -270,7 +271,7 @@ const App: React.FC = () => {
                         {isAnyFileProcessing ? 'Retaining Documents...' : 'Synthesize Strategy Core'}
                       </button>
                       <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest italic text-center max-w-md">
-                        Synthesizing {readyFilesCount + readyLibraryCount} documents for {meetingContext.clientCompany || 'prospect'}
+                        Synthesizing {activeDocuments.length} documents for {meetingContext.clientCompany || 'prospect'}
                       </p>
                     </div>
                   </div>
@@ -286,15 +287,49 @@ const App: React.FC = () => {
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold text-slate-800 animate-pulse tracking-tight">{statusMessage}</p>
-                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-4">Cross-referencing {readyFilesCount + readyLibraryCount} document nodes...</p>
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-4">Cross-referencing {activeDocuments.length} document nodes...</p>
                 </div>
               </div>
             ) : (
               <div className="animate-in fade-in duration-500">
-                {activeTab === 'context' && <MeetingContextConfig context={meetingContext} onContextChange={setMeetingContext} />}
+                {activeTab === 'context' && (
+                  <div className="space-y-12">
+                    <div className="bg-white rounded-[3rem] shadow-2xl p-10 border border-slate-200">
+                      <div className="flex items-center justify-between mb-8">
+                          <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                            <ICONS.Research /> Cognitive Library Management
+                          </h3>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Manage grounded intelligence nodes</p>
+                      </div>
+                      <DocumentGallery 
+                        documents={history} 
+                        onRefresh={loadHistory} 
+                        selectedIds={selectedLibraryDocIds}
+                        onToggleSelect={toggleLibraryDoc}
+                        onSynthesize={runAnalysis}
+                        isAnalyzing={isAnalyzing}
+                      />
+                      <div className="mt-10 pt-8 border-t border-slate-100">
+                         <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Ingest New Intelligence</h4>
+                         <FileUpload files={files} onFilesChange={setFiles} onUploadSuccess={loadHistory} />
+                      </div>
+                    </div>
+                    <MeetingContextConfig context={meetingContext} onContextChange={setMeetingContext} />
+                    <div className="flex justify-center pb-10">
+                      <button 
+                        onClick={runAnalysis}
+                        disabled={isAnalyzing}
+                        className="px-12 py-5 bg-indigo-600 text-white rounded-full font-black text-lg shadow-2xl hover:bg-indigo-700 transition-all hover:scale-105 active:scale-95 flex items-center gap-3"
+                      >
+                        <ICONS.Brain />
+                        {isAnalyzing ? 'Re-Synthesizing...' : 'Update & Re-Synthesize Strategy'}
+                      </button>
+                    </div>
+                  </div>
+                )}
                 {activeTab === 'strategy' && <AnalysisView result={analysis!} files={files} context={meetingContext} />}
-                {activeTab === 'search' && <CognitiveSearch files={files} context={meetingContext} />}
-                {activeTab === 'gpt' && <SalesGPT files={files} />}
+                {activeTab === 'search' && <CognitiveSearch activeDocuments={activeDocuments} context={meetingContext} />}
+                {activeTab === 'gpt' && <SalesGPT activeDocuments={activeDocuments} />}
                 {activeTab === 'video' && <VideoGenerator clientCompany={meetingContext.clientCompany || "Client"} />}
                 {activeTab === 'audio' && <AudioGenerator analysis={analysis!} />}
                 {activeTab === 'practice' && <PracticeSession analysis={analysis!} />}

@@ -1,6 +1,5 @@
-
 // Standard modular Firebase v9+ initialization
-import { initializeApp } from 'firebase/app';
+import { initializeApp } from "firebase/app";
 import { 
   getFirestore, 
   collection, 
@@ -42,6 +41,7 @@ let auth: any = null;
 try {
   if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "REPLACE_WITH_YOUR_API_KEY") {
     // Correct modular initialization for Firebase v9+
+    // Fix: Ensure initializeApp is treated as a valid named export from the firebase/app module.
     const app = initializeApp(firebaseConfig);
     db = getFirestore(app);
     auth = getAuth(app);

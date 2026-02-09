@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect, useMemo, FC, FormEvent, useRef } from 'react';
 import { ICONS } from '../constants';
 import { performCognitiveSearchStream, generateDynamicSuggestions, CognitiveSearchResult } from '../services/geminiService';
-import { UploadedFile, MeetingContext } from '../types';
+import { MeetingContext } from '../types';
 
 const FormattedText: FC<{ text: string }> = ({ text }) => {
   const lines = text.split('\n');
@@ -47,11 +48,11 @@ const FormattedText: FC<{ text: string }> = ({ text }) => {
 };
 
 interface CognitiveSearchProps {
-  files: UploadedFile[];
+  activeDocuments: { name: string; content: string }[];
   context: MeetingContext;
 }
 
-export const CognitiveSearch: FC<CognitiveSearchProps> = ({ files, context }) => {
+export const CognitiveSearch: FC<CognitiveSearchProps> = ({ activeDocuments, context }) => {
   const [query, setQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [result, setResult] = useState<CognitiveSearchResult | null>(null);
@@ -60,36 +61,29 @@ export const CognitiveSearch: FC<CognitiveSearchProps> = ({ files, context }) =>
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isFromCache, setIsFromCache] = useState(false);
 
-  // Deterministic cache keyed by query + content fingerprint
   const searchCache = useRef<Map<string, CognitiveSearchResult>>(new Map());
 
-  const readyFiles = useMemo(() => files.filter(f => f.status === 'ready'), [files]);
-  
-  // Fingerprint for cache invalidation if context changes
   const contextFingerprint = useMemo(() => {
     return JSON.stringify({
-      files: readyFiles.map(f => f.name + f.content.length),
+      files: activeDocuments.map(f => f.name + f.content.length),
       styles: context.answerStyles,
       persona: context.persona
     });
-  }, [readyFiles, context.answerStyles, context.persona]);
+  }, [activeDocuments, context.answerStyles, context.persona]);
 
   useEffect(() => {
     const fetchSuggestions = async () => {
-      if (readyFiles.length > 0) {
+      if (activeDocuments.length > 0) {
         try {
-          const combinedContent = readyFiles.map(f => f.content).join('\n');
+          const combinedContent = activeDocuments.map(f => f.content).join('\n');
           const res = await generateDynamicSuggestions(combinedContent, context);
           setSuggestions(res);
         } catch (e) { console.error(e); }
       }
     };
     fetchSuggestions();
-  }, [readyFiles, context]);
+  }, [activeDocuments, context]);
 
-  /**
-   * Optimized Partial JSON text extractor.
-   */
   const extractFieldFromPartialJson = (json: string, field: string): string => {
     try {
       const fieldMarker = `"${field}": "`;
@@ -180,7 +174,7 @@ export const CognitiveSearch: FC<CognitiveSearchProps> = ({ files, context }) =>
     setStreamingText("");
 
     try {
-      const combinedContent = readyFiles.map(f => `FILE: ${f.name}\n${f.content}`).join('\n\n');
+      const combinedContent = activeDocuments.map(f => `FILE: ${f.name}\n${f.content}`).join('\n\n');
       const stream = performCognitiveSearchStream(activeQuery, combinedContent, context);
       
       let fullBuffer = "";
@@ -190,12 +184,14 @@ export const CognitiveSearch: FC<CognitiveSearchProps> = ({ files, context }) =>
         const partialAnswer = extractFieldFromPartialJson(fullBuffer, "answer");
         const partialSoundbite = extractFieldFromPartialJson(fullBuffer, "articularSoundbite");
         const partialBrief = extractFieldFromPartialJson(fullBuffer, "briefExplanation");
+        const partialShot = extractFieldFromPartialJson(fullBuffer, "cognitiveShot");
         
-        if (partialAnswer || partialSoundbite || partialBrief) {
+        if (partialAnswer || partialSoundbite || partialBrief || partialShot) {
           setStreamingText(partialAnswer);
           setResult(prev => ({
             ...(prev || {}),
             answer: partialAnswer,
+            cognitiveShot: partialShot || (prev?.cognitiveShot || ""),
             articularSoundbite: partialSoundbite || (prev?.articularSoundbite || ""),
             briefExplanation: partialBrief || (prev?.briefExplanation || ""),
             psychologicalProjection: prev?.psychologicalProjection || { 
@@ -263,6 +259,17 @@ export const CognitiveSearch: FC<CognitiveSearchProps> = ({ files, context }) =>
             ) : 'Analyze'}
           </button>
         </form>
+
+        {/* Cognitive Shot (Short Answer) */}
+        {result?.cognitiveShot && (
+          <div className="mt-8 p-6 bg-indigo-50 border-l-4 border-indigo-600 rounded-2xl animate-in fade-in slide-in-from-top-2">
+             <div className="flex items-center gap-2 mb-2">
+                <ICONS.Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                <h5 className="text-[10px] font-black uppercase text-indigo-600 tracking-widest">Cognitive Shot (Executive Summary)</h5>
+             </div>
+             <p className="text-sm font-bold text-slate-800 italic leading-snug">“{result.cognitiveShot}”</p>
+          </div>
+        )}
       </div>
 
       {(result || isSearching) && (
