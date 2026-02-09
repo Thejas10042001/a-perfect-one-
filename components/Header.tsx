@@ -21,12 +21,6 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
           </span>
         </div>
 
-        <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-500">
-          <a href="#" className="text-indigo-600">Cognitive Answering</a>
-          <a href="#" className="hover:text-slate-800 transition-colors">Documents</a>
-          <a href="#" className="hover:text-slate-800 transition-colors">Team Strategy</a>
-        </nav>
-
         <div className="flex items-center gap-4">
           {user && (
             <div className="flex items-center gap-4 bg-slate-50 px-4 py-1.5 rounded-full border border-slate-100">

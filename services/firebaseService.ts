@@ -1,5 +1,7 @@
+
 // Standard modular Firebase v9+ initialization
-import { initializeApp } from "firebase/app";
+// Fix: Use namespace import to resolve "no exported member 'initializeApp'" error in certain TypeScript environments.
+import * as FirebaseApp from "firebase/app";
 import { 
   getFirestore, 
   collection, 
@@ -41,8 +43,8 @@ let auth: any = null;
 try {
   if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "REPLACE_WITH_YOUR_API_KEY") {
     // Correct modular initialization for Firebase v9+
-    // Fix: Ensure initializeApp is treated as a valid named export from the firebase/app module.
-    const app = initializeApp(firebaseConfig);
+    // Fix: Access initializeApp from the FirebaseApp namespace
+    const app = FirebaseApp.initializeApp(firebaseConfig);
     db = getFirestore(app);
     auth = getAuth(app);
   }
