@@ -1,8 +1,12 @@
 
 // Standard modular Firebase v9+ initialization
 // Use separate imports for value and type to resolve potential "no exported member" errors in some environments.
-import { initializeApp } from "firebase/app";
-import type { FirebaseApp } from "firebase/app";
+// Fix: Use wildcard import and destructuring to resolve 'no exported member' errors for initializeApp.
+import * as firebaseApp from "firebase/app";
+const { initializeApp } = firebaseApp as any;
+
+// Fix: Removed unused 'FirebaseApp' type import which was causing compilation errors.
+
 import { 
   getFirestore, 
   Firestore,

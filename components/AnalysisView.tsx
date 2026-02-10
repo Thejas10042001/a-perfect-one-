@@ -135,23 +135,13 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ result, files, conte
     { label: "Innovation", value: result.snapshot.metrics.innovationAppetite },
   ], [result.snapshot]);
 
-  // Consolidate all evidence for the Evidence Index
   const evidenceIndex = useMemo(() => {
     const list: { source: string; snippet: string; category: string }[] = [];
-    
-    // Snapshot Citations
     if (result.snapshot.roleCitation) list.push({ source: result.snapshot.roleCitation.sourceFile, snippet: result.snapshot.roleCitation.snippet, category: 'Persona' });
     result.snapshot.priorities.forEach(p => list.push({ source: p.citation.sourceFile, snippet: p.citation.snippet, category: 'Priority' }));
-    
-    // Ground Matrix Citations
     result.groundMatrix?.forEach(m => list.push({ source: m.evidence.sourceFile, snippet: m.evidence.snippet, category: 'Ground Fact' }));
-    
-    // Objection Handling Citations
     result.objectionHandling.forEach(o => list.push({ source: o.citation.sourceFile, snippet: o.citation.snippet, category: 'Objection Defense' }));
-    
-    // Document Entities
     result.documentInsights.entities.forEach(e => list.push({ source: e.citation.sourceFile, snippet: e.citation.snippet, category: 'Entity Discovery' }));
-
     return list;
   }, [result]);
 
@@ -184,86 +174,181 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ result, files, conte
       const pageWidth = doc.internal.pageSize.getWidth();
 
       const addHeader = (text: string, color = [79, 70, 229]) => {
+        if (y > 250) { doc.addPage(); y = 20; }
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(16);
+        doc.setFontSize(14);
         doc.setTextColor(color[0], color[1], color[2]);
-        doc.text(text, margin, y);
-        y += 10;
+        doc.text(text.toUpperCase(), margin, y);
+        y += 6;
         doc.setDrawColor(color[0], color[1], color[2]);
-        doc.line(margin, y - 5, pageWidth - margin, y - 5);
-        y += 5;
+        doc.setLineWidth(0.5);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 10;
       };
 
-      const addBody = (text: string, size = 10) => {
-        doc.setFont("helvetica", "normal");
+      const addSubHeader = (text: string) => {
+        if (y > 270) { doc.addPage(); y = 20; }
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(40, 40, 40);
+        doc.text(text, margin, y);
+        y += 6;
+      };
+
+      const addBody = (text: string, size = 10, italic = false) => {
+        doc.setFont("helvetica", italic ? "italic" : "normal");
         doc.setFontSize(size);
         doc.setTextColor(60, 60, 60);
         const split = doc.splitTextToSize(text, pageWidth - margin * 2);
+        
+        if (y + (split.length * (size / 2)) > 280) { doc.addPage(); y = 20; }
+        
         doc.text(split, margin, y);
-        y += split.length * (size / 2) + 5;
-        if (y > 270) { doc.addPage(); y = 20; }
+        y += split.length * (size / 2) + 6;
       };
 
-      // Header
-      doc.setFillColor(79, 70, 229);
-      doc.rect(0, 0, pageWidth, 40, 'F');
-      doc.setFontSize(24);
+      const addBullet = (text: string) => {
+        addBody(`• ${text}`);
+      };
+
+      // --- COVER PAGE ---
+      doc.setFillColor(30, 27, 75); // Indigo 950
+      doc.rect(0, 0, pageWidth, 297, 'F');
+      
       doc.setTextColor(255);
-      doc.text("COGNITIVE SALES STRATEGY", margin, 25);
-      doc.setFontSize(10);
-      doc.text(`SYNTHESIZED FOR: ${context.clientCompany.toUpperCase()}`, margin, 35);
-      y = 55;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(32);
+      doc.text("COGNITIVE SALES", margin, 100);
+      doc.setTextColor(79, 70, 229); // Indigo 600
+      doc.text("STRATEGY REPORT", margin, 115);
+      
+      doc.setFontSize(12);
+      doc.setTextColor(200);
+      doc.text(`PREPARED FOR: ${context.clientCompany.toUpperCase()}`, margin, 140);
+      doc.text(`DATE: ${new Date().toLocaleDateString()}`, margin, 148);
+      
+      doc.addPage();
+      y = 20;
 
-      // Meeting Summary
-      addHeader("MEETING SUMMARY");
-      addBody(`Client: ${context.clientCompany} (${context.clientNames})`);
-      addBody(`Seller: ${context.sellerCompany} (${context.sellerNames})`);
-      addBody(`Focus: ${context.meetingFocus}`);
-      y += 10;
+      // --- EXECUTIVE SUMMARY & CONTEXT ---
+      addHeader("Executive Mission Brief");
+      addSubHeader("Opportunity Snapshot");
+      addBody(context.executiveSnapshot || "Strategic renewal and expansion focus.");
+      
+      addSubHeader("Primary Meeting Focus");
+      addBody(context.meetingFocus);
 
-      // Ground Matrix
-      addHeader("COGNITIVE GROUND MATRIX");
+      // --- BUYER PSYCHOLOGY ---
+      addHeader("Buyer Psychology Matrix");
+      addBody(`Persona Archetype: ${result.snapshot.personaIdentity}`);
+      addBody(`Core Decision Logic: ${result.snapshot.decisionLogic}`);
+      
+      addSubHeader("Psychological Risk Profile");
+      addBody(`Decision Style: ${result.snapshot.decisionStyle}`);
+      addBody(`Risk Tolerance Level: ${result.snapshot.riskTolerance}`);
+      
+      addSubHeader("Neural Metrics");
+      radarData.forEach(d => {
+        addBody(`${d.label}: ${d.value}%`);
+      });
+
+      // --- DOCUMENT INSIGHTS ---
+      addHeader("Cognitive Grounding Matrix");
       result.groundMatrix.forEach(m => {
-        doc.setFont("helvetica", "bold");
-        doc.text(`[${m.category}] ${m.observation}`, margin, y);
-        y += 5;
-        addBody(`Significance: ${m.significance}`, 9);
+        addSubHeader(`[${m.category}] ${m.observation}`);
+        addBody(`Significance: ${m.significance}`, 9, true);
       });
 
-      // Psychology Section
-      doc.addPage(); y = 20;
-      addHeader("BUYER PSYCHOLOGY & METRICS");
-      addBody(`Identity: ${result.snapshot.personaIdentity}`);
-      addBody(`Decision Logic: ${result.snapshot.decisionLogic}`);
-      y += 80; // Placeholder for chart
+      addHeader("Document Intelligence Synthesis");
+      addBody(result.documentInsights.materialSynthesis);
 
-      // Competitive Hub
-      addHeader("COMPETITIVE INTELLIGENCE HUB");
-      const addComp = (c: CompetitorInsight, name: string) => {
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(12);
-        doc.setTextColor(0);
-        doc.text(`${name} - ${c.threatProfile} Threat`, margin, y);
-        y += 6;
-        addBody(`Wedge: ${c.ourWedge}`);
-      };
-      addComp(result.competitiveHub.cognigy, "COGNIGY");
-      addComp(result.competitiveHub.amelia, "AMELIA");
-
-      // Evidence Index
-      doc.addPage(); y = 20;
-      addHeader("ANALYSIS EVIDENCE INDEX");
-      evidenceIndex.slice(0, 15).forEach(ev => {
-        doc.setFont("helvetica", "italic");
-        doc.setFontSize(8);
-        doc.text(`Source: ${ev.source} (${ev.category})`, margin, y);
+      // --- COMPETITIVE HUB ---
+      addHeader("Competitive Intelligence Battlefield");
+      const renderComp = (c: CompetitorInsight, name: string) => {
+        addSubHeader(`${name} (${c.threatProfile} Threat)`);
+        addBody(`Overview: ${c.overview}`);
+        addBody(`Our Strategic Wedge: ${c.ourWedge}`, 10, true);
+        addBody("Key Weaknesses to Exploit:");
+        c.weaknesses.forEach(w => addBullet(w));
         y += 4;
-        addBody(`"${ev.snippet}"`, 7);
+      };
+      renderComp(result.competitiveHub.cognigy, "COGNIGY");
+      renderComp(result.competitiveHub.amelia, "AMELIA");
+      result.competitiveHub.others.forEach(o => renderComp(o, o.name));
+
+      // --- TACTICAL PLAYBOOK ---
+      addHeader("Tactical Conversation Playbook");
+      addSubHeader("Strategic Opening Hooks");
+      result.openingLines.forEach(l => {
+        addBody(`[${l.label}] “${l.text}”`, 10, true);
       });
 
-      doc.save(`Strategy-${context.clientCompany}.pdf`);
-    } catch (e) { console.error(e); } finally { setIsExporting(false); }
+      addSubHeader("Strategic Questions to Ask");
+      result.strategicQuestionsToAsk.forEach(q => {
+        addBody(`Q: ${q.question}`);
+        addBody(`Rationale: ${q.whyItMatters}`, 9, true);
+        y += 2;
+      });
+
+      addHeader("Objection Defense Drills");
+      result.objectionHandling.forEach(o => {
+        addSubHeader(`Objection: “${o.objection}”`);
+        addBody(`Psychological Meaning: ${o.realMeaning}`, 9, true);
+        addBody(`Execution Strategy: ${o.strategy}`);
+        addBody(`Recommended Wording: “${o.exactWording}”`, 10, true);
+        y += 4;
+      });
+
+      // --- DEEP DIVE SECTIONS ---
+      addHeader("In-Depth Strategic Briefing");
+      addSubHeader("Executive Summary & Background");
+      addBody(result.reportSections.introBackground);
+      
+      addSubHeader("Technical Discussion & Validation");
+      addBody(result.reportSections.technicalDiscussion);
+      
+      addSubHeader("Implementation & Product Integration");
+      addBody(result.reportSections.productIntegration);
+
+      // --- COACHING & TONE ---
+      addHeader("Final Coaching & Execution Guidance");
+      addSubHeader("Tone Alignment");
+      addBody(`Words to Utilize: ${result.toneGuidance.wordsToUse.join(', ')}`);
+      addBody(`Words to Neutralize: ${result.toneGuidance.wordsToAvoid.join(', ')}`);
+      
+      addSubHeader("Strategic Dos and Don'ts");
+      addBody("Actionable Dos:");
+      result.finalCoaching.dos.forEach(d => addBullet(d));
+      addBody("Strategic Don'ts:");
+      result.finalCoaching.donts.forEach(d => addBullet(d));
+      
+      addSubHeader("Closing Strategy Advice");
+      addBody(result.finalCoaching.finalAdvice);
+
+      // --- EVIDENCE INDEX ---
+      addHeader("Evidence Index & Traceability");
+      evidenceIndex.forEach((ev, i) => {
+        if (i < 20) { // Limit to top 20 for readability
+          addBody(`Source: ${ev.source} (${ev.category})`, 8, true);
+          addBody(`“${ev.snippet.substring(0, 150)}${ev.snippet.length > 150 ? '...' : ''}”`, 8);
+        }
+      });
+
+      doc.save(`Cognitive-Strategy-${context.clientCompany.replace(/\s+/g, '-')}.pdf`);
+    } catch (e) { 
+      console.error("PDF Export Failed:", e); 
+      alert("Strategic report generation encountered an error. Please verify jsPDF availability.");
+    } finally { 
+      setIsExporting(false); 
+    }
   };
+
+  const renderSection = (title: string, content: string) => (
+    <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+      <h4 className="text-[10px] font-black uppercase text-indigo-500 tracking-widest mb-4">{title}</h4>
+      <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{content}</p>
+    </div>
+  );
 
   return (
     <div className="space-y-12 pb-20">
@@ -278,8 +363,24 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ result, files, conte
              {VOICES.map(v => <option key={v.name} value={v.name}>{v.label}</option>)}
            </select>
         </div>
-        <button onClick={generateReportPDF} disabled={isExporting} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-indigo-700 transition-all active:scale-95">
-          {isExporting ? 'Generating Report...' : 'Download Strategy Report'}
+        <button 
+          onClick={generateReportPDF} 
+          disabled={isExporting} 
+          className={`flex items-center gap-3 px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all active:scale-95 ${isExporting ? 'bg-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+        >
+          {isExporting ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              Synthesizing PDF...
+            </>
+          ) : (
+            <>
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Download Comprehensive Brief
+            </>
+          )}
         </button>
       </div>
 
@@ -407,7 +508,6 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ result, files, conte
               </div>
               <div className="space-y-4">
                 {result.snapshot.likelyObjections.slice(0, 3).map((objection, i) => {
-                  // Find corresponding strategy from objectionHandling
                   const handle = result.objectionHandling.find(oh => oh.objection.toLowerCase().includes(objection.text.toLowerCase().substring(0, 10)));
                   return (
                     <div key={i} className="p-6 bg-slate-50 rounded-3xl border border-slate-100 hover:border-rose-200 transition-all group">
@@ -432,6 +532,13 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ result, files, conte
             </div>
           </div>
         </div>
+      </section>
+
+      {/* Strategic Report Sections - New UI Expansion */}
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {renderSection("Strategic Introduction", result.reportSections.introBackground)}
+        {renderSection("Technical Validation", result.reportSections.technicalDiscussion)}
+        {renderSection("Integration Roadmap", result.reportSections.productIntegration)}
       </section>
 
       {/* Competitive Intelligence Hub with Comparative SWOT */}
@@ -498,19 +605,16 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ result, files, conte
         <div className="space-y-16">
           {result.objectionHandling.map((o, i) => (
             <div key={i} className="relative group">
-              {/* Vertical Connector Line */}
               {i !== result.objectionHandling.length - 1 && (
                 <div className="absolute left-6 top-full h-16 w-0.5 bg-slate-100"></div>
               )}
               
               <div className="p-10 rounded-[3.5rem] bg-slate-50 border border-slate-100 hover:border-indigo-200 hover:bg-white hover:shadow-2xl transition-all duration-500 overflow-hidden relative">
-                {/* Visual Flair Background */}
                 <div className="absolute top-0 right-0 p-12 opacity-[0.02] -translate-y-1/4 translate-x-1/4 group-hover:translate-x-0 group-hover:translate-y-0 transition-transform duration-700">
                    <ICONS.Shield className="w-64 h-64 text-rose-900" />
                 </div>
 
                 <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12">
-                  {/* Left Column: The Inquiry */}
                   <div className="lg:col-span-5 space-y-8">
                     <div>
                       <div className="flex items-center gap-3 mb-3">
@@ -526,16 +630,13 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ result, files, conte
                     </div>
                   </div>
 
-                  {/* Right Column: The Strategy & Execution */}
                   <div className="lg:col-span-7 space-y-8">
-                     {/* High-Level Strategy */}
                      <div className="p-8 bg-indigo-950 text-white rounded-[2.5rem] shadow-xl relative overflow-hidden group/strat">
                         <div className="absolute top-0 right-0 p-4 opacity-10 group-hover/strat:scale-125 transition-transform"><ICONS.Research /></div>
                         <h5 className="text-[10px] font-black uppercase text-indigo-400 tracking-widest mb-3">Strategic Maneuver</h5>
                         <p className="text-lg font-bold text-white/90 leading-snug">{o.strategy}</p>
                      </div>
 
-                     {/* Exact Wording Script */}
                      <div className="p-10 bg-white border border-indigo-100 rounded-[3rem] shadow-inner flex flex-col items-center text-center relative">
                         <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
                            <div className="w-1 h-1 bg-indigo-500 rounded-full"></div>
@@ -561,7 +662,6 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ result, files, conte
                   </div>
                 </div>
 
-                {/* Footer Coaching Tips */}
                 <div className="mt-12 pt-10 border-t border-slate-200/50 grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
                   <div className="flex gap-4">
                     <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center shrink-0"><ICONS.Brain className="w-5 h-5" /></div>
@@ -579,7 +679,6 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ result, files, conte
                   </div>
                 </div>
 
-                {/* Source Citation */}
                 <div className="mt-8 pt-6 border-t border-slate-100/50 flex items-center justify-between text-[8px] font-bold text-slate-400 opacity-60">
                    <div className="flex items-center gap-2">
                       <ICONS.Document className="w-2.5 h-2.5" />

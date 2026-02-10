@@ -27,6 +27,12 @@ export interface DocumentStructure {
   detectedTablesSummary: string;
 }
 
+export interface DocumentStructure {
+  sections: string[];
+  keyHeadings: string[];
+  detectedTablesSummary: string;
+}
+
 export interface DocumentSummary {
   fileName: string;
   summary: string;
@@ -179,7 +185,7 @@ export interface MeetingContext {
 }
 
 // Sales GPT Types
-export type GPTToolMode = 'standard' | 'pineapple' | 'deep-study';
+export type GPTToolMode = 'standard' | 'pineapple' | 'deep-study' | 'cognitive';
 
 export interface GPTMessage {
   id: string;
