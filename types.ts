@@ -178,6 +178,32 @@ export interface MeetingContext {
   temperature: number;
 }
 
+// Assessment Lab Types
+export type QuestionType = 'mcq' | 'short' | 'long' | 'mic';
+
+export interface AssessmentQuestion {
+  id: string;
+  type: QuestionType;
+  text: string;
+  options?: string[]; // Only for MCQ
+  correctAnswer: string;
+  explanation: string;
+  citation?: Citation; // Grounded evidence for the answer
+}
+
+export interface AssessmentEvaluation {
+  score: number;
+  feedback: string;
+  isCorrect: boolean;
+}
+
+export interface AssessmentResult {
+  questionId: string;
+  userAnswer: string;
+  evaluation: AssessmentEvaluation;
+  timeSpent: number; // Seconds spent on this specific question
+}
+
 // Sales GPT Types
 export type GPTToolMode = 'standard' | 'pineapple' | 'deep-study' | 'cognitive';
 

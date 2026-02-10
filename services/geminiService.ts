@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type, Modality, GenerateContentResponse } from "@google/genai";
-import { AnalysisResult, MeetingContext, ThinkingLevel, GPTMessage } from "../types";
+import { AnalysisResult, MeetingContext, ThinkingLevel, GPTMessage, AssessmentQuestion, AssessmentResult, QuestionType } from "../types";
 
 // Upgraded thinking budget map for gemini-3-pro-preview capabilities
 const THINKING_LEVEL_MAP: Record<ThinkingLevel, number> = {
@@ -65,6 +65,123 @@ function safeJsonParse(str: string) {
   }
 
   throw new Error("Failed to parse cognitive intelligence response as valid JSON.");
+}
+
+// Generate Assessment Questions
+export async function generateAssessmentQuestions(
+  docContent: string, 
+  config: { mcq: number; short: number; long: number; mic: number }
+): Promise<AssessmentQuestion[]> {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const modelName = 'gemini-3-pro-preview';
+  
+  const prompt = `Act as an Elite Sales Readiness Coach. 
+  Based on the grounded document content below, generate a set of challenging questions to test a salesperson's mastery of the client's needs and organization.
+  
+  FOR MULTIPLE CHOICE QUESTIONS (MCQ):
+  - Generate exactly 4 options.
+  - Distractors should be plausible within a sales context but demonstrably incorrect based ON THE PROVIDED TEXT.
+  - Include a "citation" object that points to the exact evidence in the source text.
+  
+  COUNTS REQUIRED:
+  - MCQ: ${config.mcq}
+  - Short Answer: ${config.short}
+  - Long Answer: ${config.long}
+  - Voice/Mic Answer: ${config.mic}
+  
+  STRICT JSON FORMAT REQUIRED: Array of objects with properties:
+  {
+    "id": "unique-string",
+    "type": "mcq" | "short" | "long" | "mic",
+    "text": "The question text",
+    "options": ["A", "B", "C", "D"], // ONLY for mcq
+    "correctAnswer": "The exact correct option or ideal response",
+    "explanation": "Brief coaching explanation",
+    "citation": { "snippet": "exact quote from text", "sourceFile": "filename or 'Document'" }
+  }
+  
+  CONTENT SOURCE:
+  ${docContent}`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: modelName,
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        thinkingConfig: { thinkingBudget: 16000 }
+      }
+    });
+    return safeJsonParse(response.text || "[]");
+  } catch (error) {
+    console.error("Failed to generate questions:", error);
+    return [];
+  }
+}
+
+// Evaluate Assessment Answers
+export async function evaluateAssessment(
+  questions: AssessmentQuestion[], 
+  answers: Record<string, string>
+): Promise<AssessmentResult[]> {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const modelName = 'gemini-3-flash-preview';
+
+  const results: AssessmentResult[] = [];
+
+  // Group text-based evaluations to save tokens/latency
+  const textPayload = questions.map(q => ({
+    id: q.id,
+    type: q.type,
+    question: q.text,
+    userAnswer: answers[q.id] || "No answer provided",
+    correctAnswer: q.correctAnswer
+  }));
+
+  const prompt = `Act as a Sales Training Auditor. Grade the following question/answer sets. 
+  For MCQs, check for exact match. 
+  For Short/Long/Mic, evaluate the semantic accuracy and depth compared to the correct answer.
+  
+  Return a JSON array of objects:
+  {
+    "questionId": "string",
+    "evaluation": {
+      "score": 0-100,
+      "feedback": "Concise coaching feedback",
+      "isCorrect": boolean
+    }
+  }
+  
+  SETS:
+  ${JSON.stringify(textPayload)}`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: modelName,
+      contents: prompt,
+      config: { responseMimeType: "application/json" }
+    });
+    const evals = safeJsonParse(response.text || "[]");
+    
+    return questions.map(q => {
+      const evaluation = evals.find((e: any) => e.questionId === q.id)?.evaluation || {
+        score: 0,
+        feedback: "Evaluation module error.",
+        isCorrect: false
+      };
+      // FIX: Added 'timeSpent' property to satisfy AssessmentResult interface requirements.
+      // Although 'timeSpent' is later updated in the component, it must be present to match the interface.
+      return {
+        questionId: q.id,
+        userAnswer: answers[q.id] || "",
+        evaluation,
+        timeSpent: 0
+      };
+    });
+  } catch (error) {
+    console.error("Evaluation failed:", error);
+    return [];
+  }
 }
 
 // Vision OCR using gemini-3-flash-preview

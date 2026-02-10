@@ -11,6 +11,7 @@ import { SalesGPT } from './components/SalesGPT';
 import { MeetingContextConfig } from './components/MeetingContextConfig';
 import { DocumentGallery } from './components/DocumentGallery';
 import { VideoGenerator } from './components/VideoGenerator';
+import { AssessmentLab } from './components/AssessmentLab';
 import { analyzeSalesContext } from './services/geminiService';
 import { fetchDocumentsFromFirebase, isFirebaseActive, getFirebasePermissionError, subscribeToAuth } from './services/firebaseService';
 import { AnalysisResult, UploadedFile, MeetingContext, StoredDocument } from './types';
@@ -27,7 +28,7 @@ const App: React.FC = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
-  const [activeTab, setActiveTab] = useState<'context' | 'strategy' | 'search' | 'practice' | 'audio' | 'gpt' | 'video'>('context');
+  const [activeTab, setActiveTab] = useState<'context' | 'strategy' | 'search' | 'practice' | 'audio' | 'gpt' | 'video' | 'qa'>('context');
 
   const lastAnalyzedHash = useRef<string | null>(null);
 
@@ -180,7 +181,8 @@ const App: React.FC = () => {
                   <SidebarBtn active={activeTab === 'search'} onClick={() => setActiveTab('search')} icon={<ICONS.Search />} label="Cognitive Answering" />
                   <SidebarBtn active={activeTab === 'video'} onClick={() => setActiveTab('video')} icon={<ICONS.Play />} label="Video Synthesis" />
                   <SidebarBtn active={activeTab === 'audio'} onClick={() => setActiveTab('audio')} icon={<ICONS.Speaker />} label="Audio" />
-                  <SidebarBtn active={activeTab === 'practice'} onClick={() => setActiveTab('practice')} icon={<ICONS.Chat />} label="Live Simulation" />
+                  <SidebarBtn active={activeTab === 'practice'} onClick={() => setActiveTab('practice')} icon={<ICONS.Chat />} label="Simulation Lab" />
+                  <SidebarBtn active={activeTab === 'qa'} onClick={() => setActiveTab('qa')} icon={<ICONS.Trophy />} label="Assessment Lab" />
                   <SidebarBtn active={activeTab === 'context'} onClick={() => setActiveTab('context')} icon={<ICONS.Efficiency />} label="Config" />
                 </div>
               </div>
@@ -333,6 +335,7 @@ const App: React.FC = () => {
                 {activeTab === 'video' && <VideoGenerator context={meetingContext} />}
                 {activeTab === 'audio' && <AudioGenerator analysis={analysis!} />}
                 {activeTab === 'practice' && <PracticeSession analysis={analysis!} />}
+                {activeTab === 'qa' && <AssessmentLab activeDocuments={activeDocuments} />}
               </div>
             )}
           </div>
