@@ -27,12 +27,6 @@ export interface DocumentStructure {
   detectedTablesSummary: string;
 }
 
-export interface DocumentStructure {
-  sections: string[];
-  keyHeadings: string[];
-  detectedTablesSummary: string;
-}
-
 export interface DocumentSummary {
   fileName: string;
   summary: string;
@@ -194,4 +188,14 @@ export interface GPTMessage {
   mode: GPTToolMode;
   imageUrl?: string;
   isStreaming?: boolean;
+}
+
+export interface GroomingEvaluation {
+  transcription: string;
+  grammarScore: number;
+  toneAnalysis: string;
+  grammarFeedback: string;
+  breathPacingGuide: string;
+  strategicAlignment: string;
+  idealWording: string;
 }
