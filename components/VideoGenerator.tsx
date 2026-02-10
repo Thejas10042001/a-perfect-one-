@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { ICONS } from '../constants';
 import { GoogleGenAI } from '@google/genai';
@@ -14,7 +15,7 @@ export const VideoGenerator: React.FC<VideoGeneratorProps> = ({ clientCompany })
   const [statusMessage, setStatusMessage] = useState("");
 
   const handleGenerateVideo = async () => {
-    // Mitigate race condition: assume success after triggering openSelectKey and do not return.
+    // Check if key is selected. If not, open dialog and proceed immediately (assume success per guidelines)
     if (!(await window.aistudio.hasSelectedApiKey())) {
       await window.aistudio.openSelectKey();
     }
@@ -24,20 +25,34 @@ export const VideoGenerator: React.FC<VideoGeneratorProps> = ({ clientCompany })
     setStatusMessage("Initializing Neural Video Core...");
 
     try {
-      // Create a new instance right before making an API call to ensure it uses the most up-to-date API key.
+      // GUIDELINE: Create a new GoogleGenAI instance right before making an API call to ensure it uses the most up-to-date API key.
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       
       setStatusMessage("Synthesizing Temporal Latent Space...");
       
-      let operation = await ai.models.generateVideos({
-        model: 'veo-3.1-fast-generate-preview',
-        prompt: prompt,
-        config: {
-          numberOfVideos: 1,
-          resolution: '720p',
-          aspectRatio: '16:9'
+      let operation;
+      try {
+        operation = await ai.models.generateVideos({
+          model: 'veo-3.1-fast-generate-preview',
+          prompt: prompt,
+          config: {
+            numberOfVideos: 1,
+            resolution: '720p',
+            aspectRatio: '16:9'
+          }
+        });
+      } catch (genErr: any) {
+        // If 429 error, it's a quota issue
+        if (genErr.message?.includes("429") || genErr.message?.includes("RESOURCE_EXHAUSTED")) {
+          throw new Error("Video synthesis quota exhausted. Please check your AI Studio billing plan or try again later.");
         }
-      });
+        // If "Requested entity was not found", key selection state might be invalid
+        if (genErr.message?.includes("Requested entity was not found")) {
+          await window.aistudio.openSelectKey();
+          throw new Error("API configuration reset. Please re-select your paid API key and try again.");
+        }
+        throw genErr;
+      }
 
       const loadingMessages = [
         "Synthesizing Temporal Latent Space...",
@@ -53,25 +68,24 @@ export const VideoGenerator: React.FC<VideoGeneratorProps> = ({ clientCompany })
         setStatusMessage(loadingMessages[messageIdx % loadingMessages.length]);
         messageIdx++;
         await new Promise(resolve => setTimeout(resolve, 10000));
-        operation = await ai.operations.getVideosOperation({ operation: operation });
+        // Use fresh ai instance inside polling if necessary to ensure persistent key availability
+        const pollingAi = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        operation = await pollingAi.operations.getVideosOperation({ operation: operation });
       }
 
       const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
       if (downloadLink) {
         setStatusMessage("Fetching Encoded Payload...");
-        // Append API key when fetching from the download link as per guidelines.
+        // GUIDELINE: Must append API key when fetching from the download link.
         const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+        if (!response.ok) throw new Error(`Fetch failed: ${response.statusText}`);
         const blob = await response.blob();
         setVideoUrl(URL.createObjectURL(blob));
       } else {
-        throw new Error("Video generation completed but no video URI was returned.");
+        throw new Error("Video generation completed but no video URI was returned. Verify your billing account status.");
       }
     } catch (err: any) {
       console.error(err);
-      // Reset key selection if the request fails with "Requested entity was not found."
-      if (err.message?.includes("Requested entity was not found")) {
-        await window.aistudio.openSelectKey();
-      }
       setError(err.message || "Failed to generate strategic video asset.");
     } finally {
       setIsGenerating(false);
@@ -116,8 +130,13 @@ export const VideoGenerator: React.FC<VideoGeneratorProps> = ({ clientCompany })
             </div>
 
             {error && (
-              <div className="p-4 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 text-xs font-bold text-center">
-                {error}
+              <div className="p-6 bg-rose-50 border border-rose-100 rounded-[2rem] text-rose-600 space-y-2">
+                <div className="flex items-center gap-2">
+                  <ICONS.Security className="w-4 h-4" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Synthesis Blocked</span>
+                </div>
+                <p className="text-xs font-bold">{error}</p>
+                <p className="text-[9px] text-rose-400 uppercase tracking-widest leading-relaxed">Ensure you have selected a valid API key from a project with billing enabled.</p>
               </div>
             )}
 
@@ -126,27 +145,32 @@ export const VideoGenerator: React.FC<VideoGeneratorProps> = ({ clientCompany })
                 onClick={handleGenerateVideo}
                 disabled={isGenerating || !prompt.trim()}
                 className={`
-                  flex items-center gap-3 px-12 py-5 rounded-full font-black text-lg shadow-2xl transition-all
+                  flex items-center gap-3 px-16 py-6 rounded-full font-black text-xl shadow-2xl transition-all
                   ${!isGenerating && prompt.trim() 
-                    ? 'bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105 active:scale-95 shadow-indigo-200' 
-                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'}
+                    ? 'bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105 active:scale-95 shadow-indigo-200 cursor-pointer' 
+                    : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}
                 `}
               >
                 {isGenerating ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-slate-400 border-t-slate-600 rounded-full animate-spin"></div>
-                    {statusMessage}
+                    <div className="w-6 h-6 border-4 border-slate-400 border-t-white rounded-full animate-spin"></div>
+                    <span className="animate-pulse">{statusMessage}</span>
                   </>
                 ) : (
                   <>
-                    <ICONS.Play className="w-5 h-5" />
+                    <ICONS.Play className="w-6 h-6" />
                     Synthesize Cinematic Asset
                   </>
                 )}
               </button>
-              <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.3em]">
-                Approx. 2-3 minutes for full neural rendering
-              </p>
+              <div className="flex flex-col items-center gap-1">
+                <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.3em]">
+                  Approx. 2-5 minutes for full neural rendering
+                </p>
+                <p className="text-[9px] text-indigo-400 font-bold uppercase tracking-widest underline cursor-pointer" onClick={() => window.aistudio.openSelectKey()}>
+                  Switch API Key / Check Billing
+                </p>
+              </div>
             </div>
           </div>
         ) : (

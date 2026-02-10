@@ -1,9 +1,10 @@
 
 // Standard modular Firebase v9+ initialization
-// Fix: Use namespace import to resolve "no exported member 'initializeApp'" error in certain TypeScript environments.
-import * as FirebaseApp from "firebase/app";
+// Re-importing initializeApp with explicit FirebaseApp type to assist resolution
+import { initializeApp, FirebaseApp } from "firebase/app";
 import { 
   getFirestore, 
+  Firestore,
   collection, 
   addDoc, 
   getDocs, 
@@ -16,6 +17,7 @@ import {
 } from "firebase/firestore";
 import { 
   getAuth, 
+  Auth,
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
@@ -36,15 +38,16 @@ const firebaseConfig = {
   appId: "1:937017757020:web:1a899a8be406844e268599"
 };
 
-let db: any = null;
-let auth: any = null;
+// Properly type db and auth instances instead of using any
+let db: Firestore | null = null;
+let auth: Auth | null = null;
 
 // Initialize Firebase App, Firestore, and Auth
 try {
   if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "REPLACE_WITH_YOUR_API_KEY") {
     // Correct modular initialization for Firebase v9+
-    // Fix: Access initializeApp from the FirebaseApp namespace
-    const app = FirebaseApp.initializeApp(firebaseConfig);
+    // Ensure initializeApp is called with the config object
+    const app: FirebaseApp = initializeApp(firebaseConfig);
     db = getFirestore(app);
     auth = getAuth(app);
   }
@@ -64,7 +67,13 @@ export const clearFirebasePermissionError = () => { internalPermissionError = fa
 export const loginUser = (email: string, pass: string) => auth ? signInWithEmailAndPassword(auth, email, pass) : Promise.reject("Auth module not initialized");
 export const registerUser = (email: string, pass: string) => auth ? createUserWithEmailAndPassword(auth, email, pass) : Promise.reject("Auth module not initialized");
 export const logoutUser = () => auth && signOut(auth);
-export const subscribeToAuth = (callback: (user: User | null) => void) => auth && onAuthStateChanged(auth, callback);
+export const subscribeToAuth = (callback: (user: User | null) => void) => {
+  if (auth) {
+    return onAuthStateChanged(auth, callback);
+  }
+  // Return a no-op cleanup function if auth is not initialized
+  return () => {};
+};
 
 export const saveDocumentToFirebase = async (name: string, content: string, type: string): Promise<string | null> => {
   if (!db || !auth || !auth.currentUser) return null;
@@ -110,8 +119,7 @@ export const fetchDocumentsFromFirebase = async (): Promise<StoredDocument[]> =>
   if (!db || !auth || !auth.currentUser) return [];
 
   try {
-    // FIX: Removed server-side orderBy("timestamp", "desc") to avoid requiring a composite index.
-    // We filter by userId and will sort results client-side.
+    // FIX: Filter by userId and sort results client-side to avoid composite index requirements.
     const q = query(
       collection(db, COLLECTION_NAME), 
       where("userId", "==", auth.currentUser.uid)

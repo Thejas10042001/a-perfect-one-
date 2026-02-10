@@ -1,11 +1,12 @@
+
 import { GoogleGenAI, Type, Modality, GenerateContentResponse } from "@google/genai";
 import { AnalysisResult, MeetingContext, ThinkingLevel, GPTMessage } from "../types";
 
 const THINKING_LEVEL_MAP: Record<ThinkingLevel, number> = {
   'Minimal': 0,
   'Low': 4000,
-  'Medium': 16000,
-  'High': 32768
+  'Medium': 12000,
+  'High': 24576 // Max for gemini-3-flash series
 };
 
 /**
@@ -68,7 +69,6 @@ function safeJsonParse(str: string) {
 // Vision OCR using gemini-3-flash-preview
 export async function performVisionOcr(base64Data: string, mimeType: string): Promise<string> {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  // Using gemini-3-flash-preview for text-based vision tasks as per guidelines
   const modelName = 'gemini-3-flash-preview'; 
   try {
     const response = await ai.models.generateContent({
@@ -175,7 +175,7 @@ export async function generatePineappleImage(prompt: string): Promise<string | n
 // Deep Study: Advanced Reasoning Core
 export async function* streamDeepStudy(prompt: string, history: GPTMessage[], context?: string): AsyncGenerator<string> {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const modelName = 'gemini-3-pro-preview';
+  const modelName = 'gemini-3-flash-preview'; // Flash for stability under quota
   
   const contents = [
     ...formatHistory(history),
@@ -206,7 +206,7 @@ export async function* streamDeepStudy(prompt: string, history: GPTMessage[], co
       contents: contents,
       config: {
         systemInstruction: systemInstruction,
-        thinkingConfig: { thinkingBudget: 32768 }
+        thinkingConfig: { thinkingBudget: 24576 }
       }
     });
 
@@ -243,7 +243,7 @@ export async function* performCognitiveSearchStream(
   context: MeetingContext
 ): AsyncGenerator<string> {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const modelName = 'gemini-3-pro-preview';
+  const modelName = 'gemini-3-flash-preview'; // Switched to Flash for higher quota
   const styleDirectives = context.answerStyles.map(style => `- Create a section exactly titled "### ${style}" and provide EXHAUSTIVE detail.`).join('\n');
 
   const responseSchema = {
@@ -301,7 +301,7 @@ export async function* performCognitiveSearchStream(
         systemInstruction: `You are a Senior Cognitive Sales Strategist. Provide technical rigor and grounded depth in JSON.`,
         responseMimeType: "application/json",
         responseSchema,
-        thinkingConfig: { thinkingBudget: 32768 }
+        thinkingConfig: { thinkingBudget: 24576 }
       }
     });
 
@@ -390,7 +390,7 @@ export async function generatePitchAudio(text: string, voiceName: string = 'Kore
 
 export async function analyzeSalesContext(filesContent: string, context: MeetingContext): Promise<AnalysisResult> {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const modelName = 'gemini-3-pro-preview';
+  const modelName = 'gemini-3-flash-preview'; // Flash for higher quota/stability
   const citationSchema = {
     type: Type.OBJECT,
     properties: { snippet: { type: Type.STRING }, sourceFile: { type: Type.STRING } },
