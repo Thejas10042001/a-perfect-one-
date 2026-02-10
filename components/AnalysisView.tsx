@@ -17,7 +17,7 @@ const VOICES = [
   { name: 'Zephyr', label: 'Calm Strategist' },
 ];
 
-const CognitiveRadarChart = ({ data, size = 400 }: { data: { label: string, value: number }[], size?: number }) => {
+const CognitiveRadarChart = ({ data, size = 320 }: { data: { label: string, value: number }[], size?: number }) => {
   const center = size / 2;
   const radius = size * 0.35;
   const angleStep = (Math.PI * 2) / data.length;
@@ -28,87 +28,31 @@ const CognitiveRadarChart = ({ data, size = 400 }: { data: { label: string, valu
     return {
       x: center + r * Math.cos(angle),
       y: center + r * Math.sin(angle),
-      labelX: center + (radius + 60) * Math.cos(angle),
-      labelY: center + (radius + 60) * Math.sin(angle),
+      labelX: center + (radius + 45) * Math.cos(angle),
+      labelY: center + (radius + 45) * Math.sin(angle),
     };
   });
 
   const polygonPath = points.map(p => `${p.x},${p.y}`).join(' ');
 
   return (
-    <div className="relative flex items-center justify-center p-4">
-      <svg width={size + 240} height={size + 140} className="overflow-visible drop-shadow-2xl">
+    <div className="relative flex items-center justify-center p-8">
+      <svg width={size + 160} height={size + 100} className="overflow-visible drop-shadow-xl">
         <defs>
           <radialGradient id="radarGrad">
             <stop offset="0%" stopColor="rgba(79, 70, 229, 0.4)" />
             <stop offset="100%" stopColor="rgba(79, 70, 229, 0.05)" />
           </radialGradient>
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-            <feMerge>
-                <feMergeNode in="coloredBlur"/>
-                <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-          </filter>
         </defs>
-        {/* Grid Circles */}
         {[0.2, 0.4, 0.6, 0.8, 1].map((r, idx) => (
-          <circle 
-            key={idx} 
-            cx={center} 
-            cy={center} 
-            r={radius * r} 
-            fill={idx === 4 ? "url(#radarGrad)" : "none"} 
-            stroke="rgba(79, 70, 229, 0.15)" 
-            strokeWidth="1.5" 
-            strokeDasharray={idx < 4 ? "4 4" : "0"}
-          />
+          <circle key={idx} cx={center} cy={center} r={radius * r} fill={idx === 4 ? "url(#radarGrad)" : "none"} stroke="rgba(79, 70, 229, 0.1)" strokeWidth="1" />
         ))}
-        {/* Axis Lines */}
         {data.map((_, i) => (
-          <line 
-            key={i} 
-            x1={center} 
-            y1={center} 
-            x2={center + radius * Math.cos(i * angleStep - Math.PI / 2)} 
-            y2={center + radius * Math.sin(i * angleStep - Math.PI / 2)} 
-            stroke="rgba(79, 70, 229, 0.2)" 
-            strokeWidth="1.5" 
-          />
+          <line key={i} x1={center} y1={center} x2={center + radius * Math.cos(i * angleStep - Math.PI / 2)} y2={center + radius * Math.sin(i * angleStep - Math.PI / 2)} stroke="rgba(79, 70, 229, 0.15)" strokeWidth="1" />
         ))}
-        {/* Data Polygon */}
-        <polygon 
-          points={polygonPath} 
-          fill="rgba(79, 70, 229, 0.35)" 
-          stroke="rgba(79, 70, 229, 0.9)" 
-          strokeWidth="4" 
-          filter="url(#glow)"
-          className="transition-all duration-1000"
-        />
-        {/* Data Points */}
-        {points.map((p, i) => (
-          <circle key={i} cx={p.x} cy={p.y} r="5" fill="#4f46e5" stroke="white" strokeWidth="2" />
-        ))}
-        {/* Labels */}
+        <polygon points={polygonPath} fill="rgba(79, 70, 229, 0.3)" stroke="rgba(79, 70, 229, 0.8)" strokeWidth="3" />
         {data.map((d, i) => (
-          <g key={i}>
-            <text 
-              x={points[i].labelX} 
-              y={points[i].labelY} 
-              textAnchor="middle" 
-              className="text-[10px] font-black uppercase fill-slate-900 tracking-[0.15em]"
-            >
-              {d.label}
-            </text>
-            <text 
-              x={points[i].labelX} 
-              y={points[i].labelY + 14} 
-              textAnchor="middle" 
-              className="text-[12px] font-black fill-indigo-600"
-            >
-              {d.value}%
-            </text>
-          </g>
+          <text key={i} x={points[i].labelX} y={points[i].labelY} textAnchor="middle" className="text-[9px] font-black uppercase fill-slate-500 tracking-widest">{d.label}</text>
         ))}
       </svg>
     </div>
@@ -185,10 +129,10 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ result, files, conte
 
   const radarData = useMemo(() => [
     { label: "Risk Tolerance", value: result.snapshot.metrics.riskToleranceValue },
-    { label: "Strategic Priority Focus", value: result.snapshot.metrics.strategicPriorityFocus },
+    { label: "Strategic Focus", value: result.snapshot.metrics.strategicPriorityFocus },
     { label: "Analytical Depth", value: result.snapshot.metrics.analyticalDepth },
     { label: "Directness", value: result.snapshot.metrics.directness },
-    { label: "Innovation Appetite", value: result.snapshot.metrics.innovationAppetite },
+    { label: "Innovation", value: result.snapshot.metrics.innovationAppetite },
   ], [result.snapshot]);
 
   const evidenceIndex = useMemo(() => {
@@ -530,129 +474,67 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ result, files, conte
 
       {/* Psychology Matrix Enhanced */}
       <section className="bg-white rounded-[4rem] p-12 shadow-2xl border border-slate-200">
-        <div className="space-y-10">
-          <div>
-            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-500 mb-2">Neural Matrix</h3>
-            <h2 className="text-4xl font-black text-slate-900 mb-6">Buyer Psychology Identity</h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-              <div className="space-y-6 text-slate-600 italic border-l-4 border-indigo-100 pl-6 bg-slate-50/50 p-6 rounded-3xl">
-                <p className="text-lg"><strong>Persona Archetype:</strong> {result.snapshot.personaIdentity}</p>
-                <p className="text-lg"><strong>Core Decision Logic:</strong> {result.snapshot.decisionLogic}</p>
+        <div className="flex flex-col lg:flex-row gap-16 items-start">
+          <div className="w-full lg:w-1/2 space-y-10">
+            <div>
+              <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-500 mb-2">Neural Matrix</h3>
+              <h2 className="text-4xl font-black text-slate-900 mb-6">Buyer Psychology Identity</h2>
+              <div className="space-y-6 text-slate-600 italic border-l-4 border-indigo-100 pl-6">
+                <p><strong>Persona:</strong> {result.snapshot.personaIdentity}</p>
+                <p><strong>Logic:</strong> {result.snapshot.decisionLogic}</p>
               </div>
-              <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white flex flex-col justify-center">
-                 <h4 className="text-[9px] font-black uppercase text-indigo-400 tracking-widest mb-2">Decision Strategy Guidance</h4>
-                 <p className="text-sm font-medium leading-relaxed italic opacity-80">
-                   "The subject demonstrates a preference for {result.snapshot.decisionStyle.toLowerCase()}. Responses should anchor heavily on {result.snapshot.riskTolerance.toLowerCase()} factors to maximize conversion probability."
-                 </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10">
+                {radarData.map((d, i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="flex justify-between text-[9px] font-black uppercase text-slate-400">
+                      <span>{d.label}</span>
+                      <span>{d.value}%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${d.value}%` }}></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Anticipated Resistance Nodes */}
+            <div className="pt-10 border-t border-slate-100">
+              <div className="flex items-center gap-3 mb-6">
+                 <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center">
+                    <ICONS.Security className="w-4 h-4" />
+                 </div>
+                 <h4 className="text-[11px] font-black uppercase text-slate-900 tracking-widest">Anticipated Resistance Nodes</h4>
+              </div>
+              <div className="space-y-4">
+                {result.snapshot.likelyObjections.slice(0, 3).map((objection, i) => {
+                  const handle = result.objectionHandling.find(oh => oh.objection.toLowerCase().includes(objection.text.toLowerCase().substring(0, 10)));
+                  return (
+                    <div key={i} className="p-6 bg-slate-50 rounded-3xl border border-slate-100 hover:border-rose-200 transition-all group">
+                       <p className="text-xs font-black text-slate-800 mb-2 tracking-tight group-hover:text-rose-600 transition-colors">“{objection.text}”</p>
+                       <div className="flex items-start gap-2">
+                          <span className="text-[9px] font-black uppercase text-indigo-500 mt-0.5 tracking-widest shrink-0">Strategy:</span>
+                          <p className="text-[10px] font-bold text-slate-500 leading-snug">
+                            {handle?.strategy || "Leverage grounded ROI proof and persona-specific empathy nodes."}
+                          </p>
+                       </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
-
-          {/* Metric Indicators */}
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
-            {radarData.map((d, i) => (
-              <div key={i} className="p-6 bg-slate-50 border border-slate-100 rounded-3xl group hover:border-indigo-300 transition-all">
-                <div className="flex justify-between text-[9px] font-black uppercase text-slate-400 mb-3">
-                  <span>{d.label}</span>
-                  <span className="text-indigo-600">{d.value}%</span>
-                </div>
-                <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-indigo-500 rounded-full group-hover:bg-indigo-400 transition-all" style={{ width: `${d.value}%` }}></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* NEW Neural Profile Signature Section (Beneath Identity) */}
-      <section className="bg-white rounded-[4rem] p-12 shadow-2xl border border-slate-200 relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-12 opacity-[0.03] rotate-12"><ICONS.Brain className="w-80 h-80" /></div>
-        
-        <div className="text-center mb-16">
-          <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-indigo-500 mb-3">Neural Dimensional Mapping</h3>
-          <h2 className="text-4xl font-black text-slate-900 tracking-tight">Neural Profile Signature</h2>
-          <p className="text-slate-500 mt-4 max-w-2xl mx-auto font-medium">A multi-axial visualization of the buyer's cognitive priorities and tactical risk tolerance based on synthesized documentary evidence.</p>
-        </div>
-
-        <div className="flex flex-col lg:flex-row items-center justify-center gap-16">
-          {/* Radar Chart Component */}
-          <div className="flex-1 flex justify-center">
-             <CognitiveRadarChart data={radarData} size={420} />
-          </div>
-
-          {/* Summary/HUD Sidebar */}
-          <div className="w-full lg:w-[350px] space-y-6 shrink-0">
-             <div className="p-8 bg-indigo-600 text-white rounded-[3rem] shadow-2xl shadow-indigo-200 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-6 opacity-10"><ICONS.Trophy className="w-20 h-20" /></div>
-                <p className="text-[10px] font-black uppercase tracking-widest mb-2 opacity-70">Dominant Dimension</p>
-                <h4 className="text-2xl font-black mb-4">
-                  {radarData.sort((a,b) => b.value - a.value)[0].label}
-                </h4>
-                <p className="text-xs font-medium leading-relaxed opacity-90 italic">
-                  “Subject prioritizes structural {radarData.sort((a,b) => b.value - a.value)[0].label.toLowerCase()} over latent benefits. Frame all ROI arguments through this specific tactical lens.”
-                </p>
-             </div>
-
-             <div className="p-8 bg-slate-50 border border-slate-100 rounded-[3rem] space-y-6">
-                <h5 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Strategic Balance HUD</h5>
-                <div className="space-y-4">
-                   {radarData.map((d, i) => (
-                     <div key={i} className="flex items-center justify-between gap-4">
-                        <span className="text-[10px] font-bold text-slate-600 truncate">{d.label}</span>
-                        <div className="flex items-center gap-2">
-                           <div className="w-24 h-1 bg-slate-200 rounded-full overflow-hidden">
-                              <div className="h-full bg-indigo-500" style={{ width: `${d.value}%` }}></div>
-                           </div>
-                           <span className="text-[9px] font-black text-slate-900 w-8">{d.value}%</span>
-                        </div>
-                     </div>
-                   ))}
-                </div>
-             </div>
-          </div>
-        </div>
-
-        {/* Tactical Recommendation Footer */}
-        <div className="mt-16 p-8 bg-slate-900 rounded-[3rem] text-white flex flex-col md:flex-row items-center justify-between gap-8">
-           <div className="flex items-center gap-4">
-              <div className="p-3 bg-indigo-500 rounded-xl"><ICONS.Efficiency /></div>
-              <p className="text-sm font-bold tracking-tight">The {context.persona} neural signature requires a {radarData[2].value > 70 ? 'High-Density Technical' : 'High-Impact Executive'} delivery style.</p>
-           </div>
-           <button className="px-8 py-3 bg-white text-slate-900 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all">Download Neural Blueprint</button>
-        </div>
-      </section>
-
-      {/* Anticipated Resistance Nodes */}
-      <section className="bg-white rounded-[4rem] p-12 shadow-2xl border border-slate-200">
-        <div className="flex items-center gap-3 mb-10">
-            <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center">
-              <ICONS.Security className="w-5 h-5" />
+          <div className="w-full lg:w-1/2 flex flex-col items-center justify-center sticky top-24">
+            <CognitiveRadarChart data={radarData} />
+            <div className="mt-4 p-6 bg-indigo-50 rounded-[2.5rem] border border-indigo-100 text-center max-w-sm">
+               <p className="text-[9px] font-black uppercase text-indigo-600 tracking-widest mb-1">Synthesized Decision Driver</p>
+               <p className="text-xs font-bold text-slate-700 italic">“Anchored in high {radarData.sort((a,b) => b.value - a.value)[0].label.toLowerCase()}—responses must prioritize structural validation.”</p>
             </div>
-            <h3 className="text-xl font-black uppercase text-slate-900 tracking-widest">Anticipated Resistance Nodes</h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {result.snapshot.likelyObjections.map((objection, i) => {
-            const handle = result.objectionHandling.find(oh => oh.objection.toLowerCase().includes(objection.text.toLowerCase().substring(0, 10)));
-            return (
-              <div key={i} className="p-10 bg-slate-50 rounded-[3rem] border border-slate-100 hover:border-rose-200 hover:bg-white hover:shadow-2xl transition-all group flex flex-col">
-                  <div className="flex items-center gap-2 mb-4">
-                     <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Inferred Friction Point</p>
-                  </div>
-                  <p className="text-lg font-black text-slate-800 mb-6 tracking-tight group-hover:text-rose-600 transition-colors">“{objection.text}”</p>
-                  <div className="mt-auto pt-6 border-t border-slate-200">
-                    <p className="text-[10px] font-bold text-slate-500 leading-snug italic">
-                      {handle?.strategy || "Leverage grounded ROI proof and persona-specific empathy nodes."}
-                    </p>
-                  </div>
-              </div>
-            );
-          })}
+          </div>
         </div>
       </section>
 
-      {/* Strategic Report Sections */}
+      {/* Strategic Report Sections - New UI Expansion */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {renderSection("Strategic Introduction", result.reportSections.introBackground)}
         {renderSection("Technical Validation", result.reportSections.technicalDiscussion)}
