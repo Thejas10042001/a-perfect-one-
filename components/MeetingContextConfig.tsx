@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { MeetingContext, CustomerPersonaType, ThinkingLevel } from '../types';
 import { ICONS } from '../constants';
@@ -7,11 +8,35 @@ interface MeetingContextConfigProps {
   onContextChange: (updated: MeetingContext) => void;
 }
 
-const PERSONAS: { type: CustomerPersonaType; label: string; desc: string; icon: React.ReactNode }[] = [
-  { type: 'Balanced', label: 'Balanced', desc: 'Versatile profile for general business users in B2B settings', icon: <ICONS.Document /> },
-  { type: 'Technical', label: 'Technical', desc: 'Deep technical, jargon-friendly (CTO, VP Engineering, Tech Lead)', icon: <ICONS.Brain /> },
-  { type: 'Financial', label: 'Financial', desc: 'ROI-driven, cost-benefit analysis (CFO, Financial Controller)', icon: <ICONS.ROI /> },
-  { type: 'Business Executives', label: 'Executives', desc: 'Strategic impact, operational clarity (CEO, Founder, MD)', icon: <ICONS.Trophy /> },
+const PERSONAS: { type: CustomerPersonaType; label: string; desc: string; icon: React.ReactNode; strategicGuidance: string }[] = [
+  { 
+    type: 'Balanced', 
+    label: 'Balanced', 
+    desc: 'Versatile profile for general business users in B2B settings', 
+    icon: <ICONS.Document />,
+    strategicGuidance: "Best for multi-stakeholder initial discovery. AI balances operational utility with basic business value."
+  },
+  { 
+    type: 'Technical', 
+    label: 'Technical', 
+    desc: 'Deep technical, jargon-friendly (CTO, VP Engineering, Tech Lead)', 
+    icon: <ICONS.Brain />,
+    strategicGuidance: "AI shifts into 'Verification' mode. Focuses on architecture, APIs, security, and scalability. Skeptical of non-technical claims."
+  },
+  { 
+    type: 'Financial', 
+    label: 'Financial', 
+    desc: 'ROI-driven, cost-benefit analysis (CFO, Financial Controller)', 
+    icon: <ICONS.ROI />,
+    strategicGuidance: "AI shifts into 'Efficiency' mode. Prioritizes ROI, TCO, payback periods, and budgetary alignment. Requires hard data proof."
+  },
+  { 
+    type: 'Business Executives', 
+    label: 'Executives', 
+    desc: 'Strategic impact, operational clarity (CEO, Founder, MD)', 
+    icon: <ICONS.Trophy />,
+    strategicGuidance: "AI shifts into 'Growth' mode. Focuses on market positioning, competitive displacement, and top-line strategic impact."
+  },
 ];
 
 const ANSWER_STYLES = [
@@ -50,6 +75,7 @@ export const MeetingContextConfig: React.FC<MeetingContextConfigProps> = ({ cont
   const [keywordInput, setKeywordInput] = useState("");
   const [localPrompt, setLocalPrompt] = useState(context.baseSystemPrompt);
   const [isSaved, setIsSaved] = useState(false);
+  const [showHelp, setShowHelp] = useState(true);
   const isCustomizedRef = useRef(false);
 
   useEffect(() => {
@@ -110,6 +136,17 @@ export const MeetingContextConfig: React.FC<MeetingContextConfigProps> = ({ cont
 
   return (
     <div className="space-y-12 animate-in fade-in duration-500">
+      {/* Help Toggle Overlay */}
+      <div className="flex justify-end">
+        <button 
+          onClick={() => setShowHelp(!showHelp)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${showHelp ? 'bg-indigo-600 text-white border-indigo-700 shadow-lg' : 'bg-white text-slate-400 border-slate-200'}`}
+        >
+          <ICONS.Sparkles className="w-3.5 h-3.5" />
+          {showHelp ? "Hide Intelligence Guidance" : "Show Intelligence Guidance"}
+        </button>
+      </div>
+
       {/* Participant Info */}
       <div className="bg-white rounded-[2.5rem] p-10 shadow-2xl border border-slate-200 overflow-hidden relative">
         <div className="flex items-center gap-3 mb-10">
@@ -120,12 +157,27 @@ export const MeetingContextConfig: React.FC<MeetingContextConfigProps> = ({ cont
           </div>
         </div>
 
+        {showHelp && (
+          <div className="mb-10 p-6 bg-indigo-50/50 border border-indigo-100 rounded-[2rem] animate-in slide-in-from-top-4">
+             <div className="flex items-center gap-3 mb-3">
+                <ICONS.Research className="text-indigo-600 w-4 h-4" />
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-700">Strategic Orientation Guide</h4>
+             </div>
+             <p className="text-xs text-indigo-900 font-medium leading-relaxed">
+               Accurate configuration allows the AI to prioritize "Winning Arguments" specifically tailored to your role, the client's industry, and the specific phase of the sales cycle.
+             </p>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           <div className="space-y-6">
             <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
                <div className="text-indigo-500"><ICONS.Trophy /></div>
                <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Seller Side</h4>
             </div>
+            {showHelp && (
+              <p className="text-[9px] font-bold text-slate-400 uppercase leading-snug italic">Used to cross-reference your organization's known capabilities against extracted client needs.</p>
+            )}
             <div className="space-y-5">
               <Input label="Seller Company" value={context.sellerCompany} onChange={v => handleChange('sellerCompany', v)} placeholder="e.g. Your Organization Name" />
               <Input label="Seller Name(s)" value={context.sellerNames} onChange={v => handleChange('sellerNames', v)} placeholder="e.g. Full names of participants" />
@@ -137,6 +189,9 @@ export const MeetingContextConfig: React.FC<MeetingContextConfigProps> = ({ cont
                <div className="text-rose-500"><ICONS.Search /></div>
                <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Prospect Side</h4>
             </div>
+            {showHelp && (
+              <p className="text-[9px] font-bold text-slate-400 uppercase leading-snug italic">Critical for pinpointing industry-specific pain points within the documentary data.</p>
+            )}
             <div className="space-y-5">
               <Input label="Client Company" value={context.clientCompany} onChange={v => handleChange('clientCompany', v)} placeholder="e.g. Prospect Organization Name" />
               <Input label="Client Name(s)" value={context.clientNames} onChange={v => handleChange('clientNames', v)} placeholder="e.g. Primary stakeholder(s)" />
@@ -148,6 +203,9 @@ export const MeetingContextConfig: React.FC<MeetingContextConfigProps> = ({ cont
                <div className="text-emerald-500"><ICONS.Efficiency /></div>
                <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Solution Context</h4>
             </div>
+            {showHelp && (
+              <p className="text-[9px] font-bold text-slate-400 uppercase leading-snug italic">Tells the AI which solution pillars to focus on during the 'Comparative SWOT' analysis.</p>
+            )}
             <div className="space-y-5">
               <Input label="Target Products / Services" value={context.targetProducts} onChange={v => handleChange('targetProducts', v)} placeholder="e.g. Enterprise Solution XYZ" />
               <Input label="Product Domain" value={context.productDomain} onChange={v => handleChange('productDomain', v)} placeholder="e.g. Cybersecurity, AI SaaS" />
@@ -155,32 +213,65 @@ export const MeetingContextConfig: React.FC<MeetingContextConfigProps> = ({ cont
           </div>
 
           <div className="lg:col-span-3 pt-6">
+             <div className="flex items-center justify-between mb-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] ml-1">Meeting Focus / Domains</label>
+                {showHelp && (
+                  <span className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-lg">Critical for 'Cognitive Answering' accuracy</span>
+                )}
+             </div>
              <Input 
-               label="Meeting Focus / Domains" 
+               label="" 
                value={context.meetingFocus} 
                onChange={v => handleChange('meetingFocus', v)} 
                placeholder="e.g. ROI presentation, Technical deep-dive on integration APIs, Q3 Budget Review"
                isLarge
              />
+             {showHelp && (
+               <p className="mt-4 text-[10px] text-slate-400 font-medium leading-relaxed italic max-w-3xl">
+                 Example: If you focus on "Security & Compliance," the AI will prioritize finding data privacy clauses, encryption mentions, and SOC2 evidence in your library.
+               </p>
+             )}
           </div>
         </div>
       </div>
 
       {/* Persona Selection */}
       <div className="space-y-6">
-        <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-          <ICONS.Brain /> Target Buyer Persona
-        </h3>
+        <div className="flex items-center justify-between">
+           <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+             <ICONS.Brain /> Target Buyer Persona
+           </h3>
+           {showHelp && (
+              <span className="text-[10px] font-black uppercase text-indigo-500 tracking-widest bg-indigo-50 px-4 py-1.5 rounded-full border border-indigo-100">Shifts Reasoning Archetype</span>
+           )}
+        </div>
+        
+        {showHelp && (
+          <p className="text-xs text-slate-500 font-medium max-w-2xl leading-relaxed">
+            Selecting a persona adjusts the AI's <strong>Psychological Projection</strong>. It changes the perceived "Decision Logic" and "Risk Tolerance" levels for the entire analysis.
+          </p>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {PERSONAS.map(p => (
             <button
               key={p.type}
               onClick={() => handleChange('persona', p.type)}
-              className={`p-8 rounded-[2.5rem] border-2 text-left transition-all relative overflow-hidden group ${context.persona === p.type ? 'bg-indigo-600 border-indigo-600 shadow-2xl scale-[1.02]' : 'bg-white border-slate-100 hover:border-indigo-300 shadow-sm'}`}
+              className={`p-8 rounded-[2.5rem] border-2 text-left transition-all relative overflow-hidden group flex flex-col h-full ${context.persona === p.type ? 'bg-indigo-600 border-indigo-600 shadow-2xl scale-[1.02]' : 'bg-white border-slate-100 hover:border-indigo-300 shadow-sm'}`}
             >
               <div className={`p-4 rounded-2xl mb-6 inline-block ${context.persona === p.type ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-500'}`}>{p.icon}</div>
               <p className={`font-black text-base uppercase tracking-widest mb-3 ${context.persona === p.type ? 'text-white' : 'text-slate-800'}`}>{p.label}</p>
-              <p className={`text-[11px] leading-relaxed font-medium ${context.persona === p.type ? 'text-indigo-100' : 'text-slate-500'}`}>{p.desc}</p>
+              <p className={`text-[11px] leading-relaxed font-medium mb-6 ${context.persona === p.type ? 'text-indigo-100' : 'text-slate-500'}`}>{p.desc}</p>
+              
+              {showHelp && (
+                <div className={`mt-auto pt-4 border-t ${context.persona === p.type ? 'border-white/20' : 'border-slate-50'}`}>
+                   <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${context.persona === p.type ? 'text-indigo-200' : 'text-indigo-400'}`}>Strategic Bias</p>
+                   <p className={`text-[9px] font-bold leading-snug italic ${context.persona === p.type ? 'text-white/80' : 'text-slate-400'}`}>
+                      {p.strategicGuidance}
+                   </p>
+                </div>
+              )}
+
               {context.persona === p.type && (
                 <div className="absolute top-6 right-6 text-white animate-bounce"><ICONS.Trophy /></div>
               )}
@@ -191,9 +282,27 @@ export const MeetingContextConfig: React.FC<MeetingContextConfigProps> = ({ cont
 
       {/* Answer Styles */}
       <div className="space-y-6">
-        <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-          <ICONS.Sparkles /> Desired Strategic Response Styles
-        </h3>
+        <div className="flex items-center justify-between">
+           <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+             <ICONS.Sparkles /> Desired Strategic Response Styles
+           </h3>
+           {showHelp && (
+              <span className="text-[10px] font-black uppercase text-indigo-500 tracking-widest bg-indigo-50 px-4 py-1.5 rounded-full border border-indigo-100">Controls Synthesis Structure</span>
+           )}
+        </div>
+
+        {showHelp && (
+          <div className="p-6 bg-slate-50 border border-slate-100 rounded-[2rem] flex items-start gap-4">
+             <div className="p-3 bg-white rounded-xl shadow-sm text-indigo-600 shrink-0"><ICONS.Document /></div>
+             <div>
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-900 mb-1">Synthesized Header Control</h4>
+                <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                  These selections define the <strong>sections</strong> in the "Cognitive Search" output and the structure of the "Briefing Report". Select styles that correspond to your specific knowledge gaps or presentation slides.
+                </p>
+             </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {ANSWER_STYLES.map(style => (
             <button
@@ -221,6 +330,11 @@ export const MeetingContextConfig: React.FC<MeetingContextConfigProps> = ({ cont
             className="w-full bg-slate-50 border-2 border-slate-100 rounded-3xl p-8 text-sm focus:border-indigo-500 focus:bg-white outline-none transition-all h-40 resize-none shadow-inner leading-relaxed"
             placeholder="e.g. Q3 renewal discussion, focus is on expanding to 500 seats while addressing recent concerns..."
           />
+          {showHelp && (
+            <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest text-center px-4">
+               Anchors the AI's empathy logic during objection handling and rehearsal.
+            </p>
+          )}
         </div>
 
         <div className="bg-white rounded-[2.5rem] p-10 shadow-xl border border-slate-100 space-y-6">
@@ -249,6 +363,11 @@ export const MeetingContextConfig: React.FC<MeetingContextConfigProps> = ({ cont
             ))}
             {context.strategicKeywords.length === 0 && <p className="text-slate-300 text-xs italic">No keywords added yet.</p>}
           </div>
+          {showHelp && (
+            <p className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest text-center px-4">
+               Increases the weighting of these terms during document retrieval.
+            </p>
+          )}
         </div>
       </div>
 
@@ -285,6 +404,13 @@ export const MeetingContextConfig: React.FC<MeetingContextConfigProps> = ({ cont
               )}
             </button>
           </div>
+          
+          {showHelp && (
+            <p className="text-[10px] text-slate-500 font-medium leading-relaxed max-w-4xl italic">
+              The AI auto-generates this prompt based on your configuration above. You can <strong>manually override</strong> it here if you need to inject specific rules or role-play constraints not covered by the UI.
+            </p>
+          )}
+
           <textarea
             value={localPrompt}
             onChange={e => handlePromptUpdate(e.target.value)}
@@ -317,7 +443,7 @@ export const MeetingContextConfig: React.FC<MeetingContextConfigProps> = ({ cont
 
 const Input = ({ label, value, onChange, placeholder, isLarge }: { label: string; value: string; onChange: (v: string) => void; placeholder: string, isLarge?: boolean }) => (
   <div className="space-y-2">
-    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] ml-1">{label}</label>
+    {label && <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] ml-1">{label}</label>}
     <input
       type="text"
       value={value}

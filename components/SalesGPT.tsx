@@ -2,17 +2,19 @@
 import React, { useState, useRef, useEffect, FC } from 'react';
 import { ICONS } from '../constants';
 import { streamSalesGPT, generatePineappleImage, streamDeepStudy } from '../services/geminiService';
-import { GPTMessage, GPTToolMode } from '../types';
+import { GPTMessage, GPTToolMode, MeetingContext } from '../types';
 
 interface SalesGPTProps {
   activeDocuments: { name: string; content: string }[];
+  meetingContext: MeetingContext;
 }
 
-export const SalesGPT: FC<SalesGPTProps> = ({ activeDocuments }) => {
+export const SalesGPT: FC<SalesGPTProps> = ({ activeDocuments, meetingContext }) => {
   const [messages, setMessages] = useState<GPTMessage[]>([]);
   const [input, setInput] = useState("");
   const [mode, setMode] = useState<GPTToolMode>('standard');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [includeContext, setIncludeContext] = useState(true);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -49,7 +51,23 @@ export const SalesGPT: FC<SalesGPTProps> = ({ activeDocuments }) => {
 
     setMessages(prev => [...prev, assistantMessage]);
 
-    const context = activeDocuments.map(d => `FILE [${d.name}]:\n${d.content}`).join('\n\n');
+    // Construct Grounding Context
+    let contextStr = activeDocuments.map(d => `FILE [${d.name}]:\n${d.content}`).join('\n\n');
+    
+    if (includeContext) {
+      const meetingDetails = `
+--- STRATEGIC MEETING CONTEXT ---
+Seller: ${meetingContext.sellerCompany} (${meetingContext.sellerNames})
+Prospect: ${meetingContext.clientCompany} (${meetingContext.clientNames})
+Product: ${meetingContext.targetProducts} (${meetingContext.productDomain})
+Meeting Focus: ${meetingContext.meetingFocus}
+Persona Target: ${meetingContext.persona}
+Strategic Keywords: ${meetingContext.strategicKeywords.join(', ')}
+Executive Snapshot: ${meetingContext.executiveSnapshot}
+---------------------------------
+`;
+      contextStr = meetingDetails + contextStr;
+    }
 
     try {
       if (mode === 'pineapple') {
@@ -58,7 +76,7 @@ export const SalesGPT: FC<SalesGPTProps> = ({ activeDocuments }) => {
           m.id === assistantId ? { ...m, content: imageUrl ? "Your strategic visual asset has been synthesized and grounded in neural logic:" : "Strategic visualization engine encountered a rendering stall.", imageUrl: imageUrl || undefined, isStreaming: false } : m
         ));
       } else if (mode === 'deep-study') {
-        const stream = streamDeepStudy(input, currentHistory, context);
+        const stream = streamDeepStudy(input, currentHistory, contextStr);
         let fullText = "";
         for await (const chunk of stream) {
           fullText += chunk;
@@ -68,7 +86,7 @@ export const SalesGPT: FC<SalesGPTProps> = ({ activeDocuments }) => {
         }
         setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, isStreaming: false } : m));
       } else {
-        const stream = streamSalesGPT(input, currentHistory, context);
+        const stream = streamSalesGPT(input, currentHistory, contextStr);
         let fullText = "";
         for await (const chunk of stream) {
           fullText += chunk;
@@ -127,12 +145,12 @@ export const SalesGPT: FC<SalesGPTProps> = ({ activeDocuments }) => {
 
         {/* Grounding HUD */}
         <div className="flex items-center gap-4 py-2 px-4 bg-white/50 border border-slate-100 rounded-2xl">
-           <div className="flex items-center gap-2 text-indigo-600">
+           <div className="flex items-center gap-2 text-indigo-600 shrink-0">
               <ICONS.Shield className="w-4 h-4" />
-              <span className="text-[9px] font-black uppercase tracking-widest">Context Grounding</span>
+              <span className="text-[9px] font-black uppercase tracking-widest">Document Memory</span>
            </div>
-           <div className="h-4 w-px bg-slate-200"></div>
-           <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+           <div className="h-4 w-px bg-slate-200 shrink-0"></div>
+           <div className="flex gap-2 overflow-x-auto no-scrollbar py-1 flex-1">
               {activeDocuments.length > 0 ? activeDocuments.map((doc, i) => (
                 <div key={i} className="px-3 py-1 bg-indigo-50 text-indigo-600 text-[8px] font-black uppercase tracking-widest rounded-lg border border-indigo-100 whitespace-nowrap">
                    {doc.name}
@@ -141,6 +159,14 @@ export const SalesGPT: FC<SalesGPTProps> = ({ activeDocuments }) => {
                 <span className="text-[8px] font-bold text-slate-300 uppercase italic">No documents currently uploaded to memory.</span>
               )}
            </div>
+           <div className="h-4 w-px bg-slate-200 shrink-0"></div>
+           <button 
+             onClick={() => setIncludeContext(!includeContext)}
+             className={`flex items-center gap-2 px-3 py-1 rounded-lg border transition-all ${includeContext ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-white text-slate-400 border-slate-200'}`}
+           >
+             <div className={`w-1.5 h-1.5 rounded-full ${includeContext ? 'bg-emerald-400' : 'bg-slate-300'}`}></div>
+             <span className="text-[8px] font-black uppercase tracking-widest">Sync Meeting Context</span>
+           </button>
         </div>
       </div>
 
@@ -153,7 +179,9 @@ export const SalesGPT: FC<SalesGPTProps> = ({ activeDocuments }) => {
             </div>
             <div className="max-w-md">
               <h4 className="text-2xl font-black text-slate-800">Grounding Ready</h4>
-              <p className="text-slate-500 mt-2 font-medium">I have access to your {activeDocuments.length} active documents. Ask me to extract insights, draft pitches, or summarize complex technical requirements.</p>
+              <p className="text-slate-500 mt-2 font-medium">
+                I have access to your {activeDocuments.length} active documents {includeContext ? `and the strategic context for ${meetingContext.clientCompany}` : ''}. Ask me to extract insights, draft pitches, or summarize requirements.
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-4 w-full max-w-lg">
                <StarterCard label="Strategic Wedge" onClick={() => setInput("Based on the docs, what is our best competitive wedge?")} />
@@ -272,9 +300,17 @@ export const SalesGPT: FC<SalesGPTProps> = ({ activeDocuments }) => {
             </button>
           </div>
           
-          <p className="text-center text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">
-             {mode === 'deep-study' ? 'Advanced Reasoning Core Active • Intensive Logic Applied' : 'Conversational History Active • Source Grounding Linked'}
-          </p>
+          <div className="flex items-center justify-center gap-6">
+             <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">
+               {mode === 'deep-study' ? 'Advanced Reasoning Core Active • Intensive Logic Applied' : 'Conversational History Active • Source Grounding Linked'}
+             </p>
+             {includeContext && (
+               <div className="flex items-center gap-2">
+                 <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse"></div>
+                 <span className="text-[9px] font-black uppercase tracking-[0.3em] text-indigo-500">Meeting Context Synchronized</span>
+               </div>
+             )}
+          </div>
         </div>
       </div>
       <style>{`

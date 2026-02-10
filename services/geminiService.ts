@@ -2,11 +2,12 @@
 import { GoogleGenAI, Type, Modality, GenerateContentResponse } from "@google/genai";
 import { AnalysisResult, MeetingContext, ThinkingLevel, GPTMessage } from "../types";
 
+// Upgraded thinking budget map for gemini-3-pro-preview capabilities
 const THINKING_LEVEL_MAP: Record<ThinkingLevel, number> = {
   'Minimal': 0,
-  'Low': 4000,
-  'Medium': 12000,
-  'High': 24576 // Max for gemini-3-flash series
+  'Low': 8000,
+  'Medium': 16000,
+  'High': 32768 // Max for gemini-3-pro-preview
 };
 
 /**
@@ -141,7 +142,7 @@ export async function* streamSalesGPT(prompt: string, history: GPTMessage[], con
   }
 }
 
-// Pineapple: Image Generation
+// Pineapple: Image Generation using nano banana model
 export async function generatePineappleImage(prompt: string): Promise<string | null> {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const modelName = 'gemini-2.5-flash-image';
@@ -172,10 +173,11 @@ export async function generatePineappleImage(prompt: string): Promise<string | n
   }
 }
 
-// Deep Study: Advanced Reasoning Core
+// Deep Study: Advanced Reasoning Core upgraded to Pro model
 export async function* streamDeepStudy(prompt: string, history: GPTMessage[], context?: string): AsyncGenerator<string> {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const modelName = 'gemini-3-flash-preview'; // Flash for stability under quota
+  // Using gemini-3-pro-preview for complex reasoning tasks
+  const modelName = 'gemini-3-pro-preview';
   
   const contents = [
     ...formatHistory(history),
@@ -206,7 +208,7 @@ export async function* streamDeepStudy(prompt: string, history: GPTMessage[], co
       contents: contents,
       config: {
         systemInstruction: systemInstruction,
-        thinkingConfig: { thinkingBudget: 24576 }
+        thinkingConfig: { thinkingBudget: 32768 }
       }
     });
 
@@ -237,13 +239,15 @@ export interface CognitiveSearchResult {
   };
 }
 
+// Cognitive Search upgraded to Pro model for deep grounded reasoning
 export async function* performCognitiveSearchStream(
   question: string, 
   filesContent: string, 
   context: MeetingContext
 ): AsyncGenerator<string> {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const modelName = 'gemini-3-flash-preview'; // Switched to Flash for higher quota
+  // Using gemini-3-pro-preview for advanced reasoning and complex query synthesis
+  const modelName = 'gemini-3-pro-preview';
   const styleDirectives = context.answerStyles.map(style => `- Create a section exactly titled "### ${style}" and provide EXHAUSTIVE detail.`).join('\n');
 
   const responseSchema = {
@@ -301,7 +305,7 @@ export async function* performCognitiveSearchStream(
         systemInstruction: `You are a Senior Cognitive Sales Strategist. Provide technical rigor and grounded depth in JSON.`,
         responseMimeType: "application/json",
         responseSchema,
-        thinkingConfig: { thinkingBudget: 24576 }
+        thinkingConfig: { thinkingBudget: 32768 }
       }
     });
 
@@ -374,6 +378,7 @@ export async function generateExplanation(question: string, context: AnalysisRes
   return response.text || "";
 }
 
+// Text to speech generation using specialized TTS model
 export async function generatePitchAudio(text: string, voiceName: string = 'Kore'): Promise<Uint8Array | null> {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const response = await ai.models.generateContent({
@@ -388,9 +393,11 @@ export async function generatePitchAudio(text: string, voiceName: string = 'Kore
   return base64Audio ? decode(base64Audio) : null;
 }
 
+// Full Context Analysis upgraded to Pro model for comprehensive reasoning
 export async function analyzeSalesContext(filesContent: string, context: MeetingContext): Promise<AnalysisResult> {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const modelName = 'gemini-3-flash-preview'; // Flash for higher quota/stability
+  // Using gemini-3-pro-preview for exhaustive material synthesis and competitive intelligence
+  const modelName = 'gemini-3-pro-preview';
   const citationSchema = {
     type: Type.OBJECT,
     properties: { snippet: { type: Type.STRING }, sourceFile: { type: Type.STRING } },

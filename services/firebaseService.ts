@@ -1,7 +1,8 @@
 
 // Standard modular Firebase v9+ initialization
-// Re-importing initializeApp with explicit FirebaseApp type to assist resolution
-import { initializeApp, FirebaseApp } from "firebase/app";
+// Use separate imports for value and type to resolve potential "no exported member" errors in some environments.
+import { initializeApp } from "firebase/app";
+import type { FirebaseApp } from "firebase/app";
 import { 
   getFirestore, 
   Firestore,
@@ -46,8 +47,8 @@ let auth: Auth | null = null;
 try {
   if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "REPLACE_WITH_YOUR_API_KEY") {
     // Correct modular initialization for Firebase v9+
-    // Ensure initializeApp is called with the config object
-    const app: FirebaseApp = initializeApp(firebaseConfig);
+    // Using any for app to bypass potential type export issues in this environment
+    const app: any = initializeApp(firebaseConfig);
     db = getFirestore(app);
     auth = getAuth(app);
   }
@@ -119,7 +120,7 @@ export const fetchDocumentsFromFirebase = async (): Promise<StoredDocument[]> =>
   if (!db || !auth || !auth.currentUser) return [];
 
   try {
-    // FIX: Filter by userId and sort results client-side to avoid composite index requirements.
+    // Filter by userId and sort results client-side to avoid composite index requirements.
     const q = query(
       collection(db, COLLECTION_NAME), 
       where("userId", "==", auth.currentUser.uid)

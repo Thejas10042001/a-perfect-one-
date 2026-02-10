@@ -329,7 +329,7 @@ const App: React.FC = () => {
                 )}
                 {activeTab === 'strategy' && <AnalysisView result={analysis!} files={files} context={meetingContext} />}
                 {activeTab === 'search' && <CognitiveSearch activeDocuments={activeDocuments} context={meetingContext} />}
-                {activeTab === 'gpt' && <SalesGPT activeDocuments={activeDocuments} />}
+                {activeTab === 'gpt' && <SalesGPT activeDocuments={activeDocuments} meetingContext={meetingContext} />}
                 {activeTab === 'video' && <VideoGenerator clientCompany={meetingContext.clientCompany || "Client"} />}
                 {activeTab === 'audio' && <AudioGenerator analysis={analysis!} />}
                 {activeTab === 'practice' && <PracticeSession analysis={analysis!} />}
