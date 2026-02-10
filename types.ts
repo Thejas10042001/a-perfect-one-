@@ -195,7 +195,9 @@ export interface GroomingEvaluation {
   grammarScore: number;
   toneAnalysis: string;
   grammarFeedback: string;
+  sentenceFormation: string;
   breathPacingGuide: string;
   strategicAlignment: string;
   idealWording: string;
+  correctionExplanation: string;
 }
